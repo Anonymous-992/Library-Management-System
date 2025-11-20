@@ -299,12 +299,20 @@ const ManageStudent = () => {
                         onClick={() => {
                           setFormData({
                             _id: i._id,
-                            name: i.name,
-                            fatherName: i.fatherName,
-                            email: i.email,
-                            rollNumber: i.rollNumber,
-                            batch: i.batch._id,
-                            departement: i.departement._id,
+                            name: i.name || "",
+                            fatherName: i.fatherName || "",
+                            email: i.email || "",
+                            rollNumber: i.rollNumber || "",
+                            batch: i.batch?._id || "",
+                            departement: i.departement?._id || "",
+                          });
+                          setErrors({
+                            name: "",
+                            fatherName: "",
+                            email: "",
+                            rollNumber: "",
+                            batch: "",
+                            departement: "",
                           });
                           setShowUpdateModel(true);
                         }}

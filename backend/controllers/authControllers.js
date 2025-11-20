@@ -1,4 +1,5 @@
 import UserModel from "../models/user-model.js";
+import DepartementModel from "../models/departement-model.js";
 import {
   ErrorHandlerService,
   deleteFile,
@@ -313,7 +314,11 @@ class AuthController {
       if (!user) {
         return next(ErrorHandlerService.notFound("User Not Found"));
       }
-      return res.status(200).json({ user });
+      let hodDepartement = null;
+      if (user.role === "HOD") {
+        hodDepartement = await DepartementModel.findOne({ hod: user._id }, "-__v");
+      }
+      return res.status(200).json({ user, hodDepartement });
     } catch (error) {
       next(error);
     }

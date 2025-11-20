@@ -32,6 +32,12 @@ class DepartementController {
         return next(ErrorHandlerService.badRequest("Invalid Teacher !"));
       }
 
+      /* ENSURE THIS TEACHER IS NOT HOD OF ANY OTHER DEPARTEMENT */
+      await DepartementModel.updateMany(
+        { hod: teacher._id },
+        { $set: { hod: null } }
+      );
+
       /* SAVE INTO DB */
       const document = await DepartementModel.create({ name, hod });
       /* CHANGE TEACER STATUS INTO HOD */
@@ -50,19 +56,22 @@ class DepartementController {
     const filter = q ? { name: { $regex: new RegExp(q, "i") } } : {};
 
     try {
-      const [departements, totalRecords,teachers] = await Promise.all([
+      const [departements, totalRecords, teachers] = await Promise.all([
         DepartementModel.find(filter, "-__v")
           .populate("hod", "-__v -password")
           .skip(skip)
           .limit(limit)
           .exec(),
         DepartementModel.countDocuments(filter).exec(),
-        UserModel.find({role:"Teacher"},"name _id")
+        UserModel.find(
+          { role: { $in: ["Teacher", "HOD"] } },
+          "name _id role"
+        ),
       ]);
       totalPages = Math.ceil(totalRecords / limit);
       return res
         .status(200)
-        .json({ departements, page, limit, totalRecords, totalPages,teachers });
+        .json({ departements, page, limit, totalRecords, totalPages, teachers });
     } catch (error) {
       next(error);
     }
@@ -87,11 +96,12 @@ class DepartementController {
 
   async updateDepartement(req, res, next) {
     const { _id } = req.params;
-    /* HOD CHANGE */
-    const { hod } = req.body;
-    /* VALIDATE REQUEST */
-    if (!hod) {
-      return next(ErrorHandlerService.validationError());
+    const { name, hod } = req.body;
+
+    // validate name and hod using the same schema as create
+    const { error } = departementValidationSchema.validate({ name, hod });
+    if (error) {
+      return next(error);
     }
 
     try {
@@ -100,21 +110,53 @@ class DepartementController {
       if (!document) {
         return next(ErrorHandlerService.notFound());
       }
-      /* CHECK TEACHER EXIST WHO WILL BE THE NEW HOD */
-      const teacher = await UserModel.findOne({ _id: hod, role: "Teacher" });
-      if (!teacher) {
+
+      /* CHECK DEPARTEMENT NAME ALREADY EXIST (for other records) */
+      if (document.name !== name) {
+        const isExist = await DepartementModel.findOne({ name });
+        if (isExist && isExist._id.toString() !== _id) {
+          return next(
+            ErrorHandlerService.alreadyExist(
+              "Departement of that name is already exist !"
+            )
+          );
+        }
+      }
+
+      /* CHECK USER EXIST WHO WILL BE THE NEW HOD (Teacher or HOD) */
+      const newHOD = await UserModel.findOne({
+        _id: hod,
+        role: { $in: ["Teacher", "HOD"] },
+      });
+      if (!newHOD) {
         return next(ErrorHandlerService.badRequest("Invalid Teacher !"));
       }
-      /* CHANGE PREVOIOUS HOD STATUS INTO TEACHER */
-      const previousHOD = await UserModel.findOne({ _id: document.hod });
-      previousHOD.role = "Teacher";
-      await previousHOD.save();
-      /* CHANGE STATUS OF NEW TEACHER INTO HOD */
-      teacher.role = "HOD";
-      await teacher.save();
-      /* CHANGE HOD OF DEPARTEMENT */
+
+      /* CHANGE PREVIOUS HOD STATUS INTO TEACHER IF DIFFERENT */
+      if (document.hod && document.hod.toString() !== hod) {
+        const previousHOD = await UserModel.findById(document.hod);
+        if (previousHOD) {
+          previousHOD.role = "Teacher";
+          await previousHOD.save();
+        }
+      }
+
+      /* ENSURE THIS USER IS NOT HOD OF ANY OTHER DEPARTEMENT */
+      await DepartementModel.updateMany(
+        { hod: newHOD._id, _id: { $ne: _id } },
+        { $set: { hod: null } }
+      );
+
+      /* ENSURE NEW USER HAS HOD ROLE */
+      if (newHOD.role !== "HOD") {
+        newHOD.role = "HOD";
+        await newHOD.save();
+      }
+
+      /* UPDATE DEPARTEMENT DETAILS */
       document.hod = hod;
-      document.save();
+      document.name = name;
+      await document.save();
 
       return res.status(200).json(document);
     } catch (error) {
@@ -159,8 +201,8 @@ class DepartementController {
           csvStream.write({
             SNo: index + 1,
             "Departement Name": i.name || "-",
-            "HOD NAME": i.hod.name || "-",
-            "HOD EMAIL": i.hod.email || "-",
+            "HOD NAME": i.hod?.name || "-",
+            "HOD EMAIL": i.hod?.email || "-",
           });
         });
       }

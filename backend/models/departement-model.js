@@ -9,7 +9,7 @@ const departementSchema = new mongoose.Schema({
     hod : {
         type : mongoose.Schema.ObjectId,
         ref : "User",
-        required : true
+        required : false
     }
 });
 

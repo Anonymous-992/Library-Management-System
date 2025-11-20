@@ -13,6 +13,7 @@ import profileImage from "../../../assets/avatar.svg";
 import { toast } from "react-hot-toast";
 import { FaEdit, FaEye, FaTrash } from "react-icons/fa";
 import { Modal, Pagination } from "../../../components";
+import { useNavigate } from "react-router-dom";
 
 const ManageTeacher = () => {
   const [query, setQuery] = useState({email:"",name:""});
@@ -21,6 +22,7 @@ const ManageTeacher = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [showAddNewModel, setShowAddNewModel] = useState(false);
   const [showUpdateModel, setShowUpdateModel] = useState(false);
+  const navigate = useNavigate();
 
   const initialState = {
     _id: "",
@@ -242,6 +244,14 @@ const ManageTeacher = () => {
                   <td>{i.email}</td>
                   <td>{i.role}</td>
                   <td>
+                    <button
+                      className="btn btn__success"
+                      onClick={() => {
+                        navigate(`/admin/dashboard/user-details/${i._id}`);
+                      }}
+                    >
+                      <FaEye />
+                    </button>
                     <button
                       className="btn btn__warning"
                       onClick={() => {

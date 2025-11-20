@@ -23,20 +23,40 @@ const ManageDepartement = () => {
     hod: "",
   };
   const [formData, setFormData] = useState(initialState);
+  const [errors, setErrors] = useState({ name: "", hod: "" });
+
+  const departNameRegex = /^(?!-)(?!.*-$)[A-Za-z\s-]+$/; // letters, spaces and '-', hyphen not at start/end
+
+  const validateField = (name, value) => {
+    let msg = "";
+    if (name === "name") {
+      if (!value.trim()) msg = "Departement name is required";
+      else if (!departNameRegex.test(value))
+        msg = "Only letters and '-' allowed; '-' cannot be at start or end";
+    }
+    if (name === "hod") {
+      if (!value) msg = "HOD is required";
+    }
+    setErrors((prev) => ({ ...prev, [name]: msg }));
+    return msg;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
 
   const handleCloseAddNewModel = () => {
     setShowAddNewModel(false);
     setFormData(initialState);
+    setErrors({ name: "", hod: "" });
   };
 
   const handleCloseUpdateModel = () => {
     setShowUpdateModel(false);
     setFormData(initialState);
+    setErrors({ name: "", hod: "" });
   };
 
   const handleAddNew = (e) => {
@@ -184,7 +204,7 @@ const ManageDepartement = () => {
                 <tr key={i._id}>
                   <td>{i._id}</td>
                   <td>{i.name}</td>
-                  <td>{i.hod.name}</td>
+                  <td>{i?.hod?.name || "---"}</td>
                   <td>
                     <button
                       className="btn btn__warning"
@@ -231,6 +251,7 @@ const ManageDepartement = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="hod">Departement HOD</label>
@@ -244,9 +265,16 @@ const ManageDepartement = () => {
             >
               <option value="">Select HOD</option>
               {data?.teachers?.map((teacher) => {
-                return <option value={teacher._id}>{teacher.name}</option>;
+                // For creation, only allow selecting Teachers as HOD candidates
+                if (teacher.role !== "Teacher") return null;
+                return (
+                  <option key={teacher._id} value={teacher._id}>
+                    {teacher.name}
+                  </option>
+                );
               })}
             </select>
+            {errors.hod && <small className="text__danger">{errors.hod}</small>}
           </div>
           <div className="actions">
             <button
@@ -256,7 +284,16 @@ const ManageDepartement = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.hod ||
+                !!errors.name ||
+                !!errors.hod
+              }
+            >
               SUBMIT
             </button>
           </div>
@@ -279,8 +316,8 @@ const ManageDepartement = () => {
               className="bg text__color"
               value={formData.name}
               onChange={handleChange}
-              disabled
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="hod">Departement HOD</label>
@@ -293,9 +330,25 @@ const ManageDepartement = () => {
             >
               <option value="">Select HOD</option>
               {data?.teachers?.map((teacher) => {
-                return <option key={teacher._id} value={teacher._id}>{teacher.name}</option>;
+                let label = teacher.name;
+                if (teacher.role === "HOD") {
+                  const dept = data?.departements?.find(
+                    (d) => d?.hod?._id === teacher._id
+                  );
+                  if (dept) {
+                    label += ` (HOD of ${dept.name})`;
+                  } else {
+                    label += " (HOD)";
+                  }
+                }
+                return (
+                  <option key={teacher._id} value={teacher._id}>
+                    {label}
+                  </option>
+                );
               })}
             </select>
+            {errors.hod && <small className="text__danger">{errors.hod}</small>}
           </div>
           <div className="actions">
             <button
@@ -305,7 +358,16 @@ const ManageDepartement = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.hod ||
+                !!errors.name ||
+                !!errors.hod
+              }
+            >
               UPDATE
             </button>
           </div>

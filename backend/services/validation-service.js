@@ -7,7 +7,8 @@ const customErrorMessages = {
   "number.integer": "{{#label}} must be an integer.",
   "number.min": "{{#label}} should not be less than {{#limit}}.",
   "number.max": "{{#label}} should not be greater than {{#limit}}.",
-  batchStartEnd: "Starting year should be smaller than ending year.",
+  batchStartEnd:
+    "Starting year should be smaller than ending year and there should be exactly 4 years gap between them.",
   "string.pattern.base":
     "{{#label}} should contain alphabetic characters only.",
 };
@@ -125,7 +126,7 @@ const departementValidationSchema = Joi.object({
   name: Joi.string()
     .required()
     .max(30)
-    .pattern(/^[A-Za-z\s]+$/),
+    .pattern(/^(?!-)(?!.*-$)[A-Za-z\s-]+$/),
   hod: Joi.string().required(),
 }).messages(customErrorMessages);
 
@@ -134,18 +135,21 @@ const batchValidationSchema = Joi.object({
   startingYear: Joi.number()
     .integer()
     .required()
-    .min(2019)
+    .min(2013)
     .max(2099)
     .label("Starting Year"),
   endingYear: Joi.number()
     .integer()
     .required()
-    .min(2020)
+    .min(2013)
     .max(2099)
     .label("Ending Year"),
 })
   .custom((batch, helpers) => {
     if (batch.startingYear >= batch.endingYear) {
+      return helpers.error("batchStartEnd");
+    }
+    if (batch.endingYear - batch.startingYear !== 4) {
       return helpers.error("batchStartEnd");
     }
     return batch;

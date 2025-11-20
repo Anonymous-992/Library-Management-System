@@ -7,11 +7,13 @@ import { useEffect } from "react";
 
 const UserDetail = () => {
   const [user, setUser] = useState({});
+  const [hodDepartement, setHodDepartement] = useState(null);
   const {_id} = useParams();
   const fetchUserDetails = async ()=>{
     try {
         const {data} = await getUserDetails(_id);
         setUser(data?.user)
+        setHodDepartement(data?.hodDepartement || null);
         setImage( data?.user?.imagePath ? `${BASE_URL}/${data?.user?.imagePath}` : profileImage)
     } catch (error) {
         console.log(error);
@@ -52,6 +54,13 @@ const UserDetail = () => {
               <th>Role</th>
               <td>{user?.role}</td>
             </tr>
+
+            {user?.role === "HOD" && (
+              <tr>
+                <th>HOD of Departement</th>
+                <td>{hodDepartement?.name || "----"}</td>
+              </tr>
+            )}
 
             <tr>
               <th>Account Status</th>

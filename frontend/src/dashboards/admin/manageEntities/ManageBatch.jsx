@@ -4,6 +4,7 @@ import {
   exportBatches,
   getAllBatches,
   updateBatch,
+  deleteBatches,
 } from "../../../http";
 import { toast } from "react-hot-toast";
 import { FaEdit, FaEye, FaTrash } from "react-icons/fa";
@@ -24,20 +25,90 @@ const ManageBatch = () => {
     endingYear : "",
   };
   const [formData, setFormData] = useState(initialState);
+  const [errors, setErrors] = useState({ name: "", startingYear: "", endingYear: "" });
+
+  // allow letters, numbers, spaces and '-', with explicit checks for first/last character
+  const batchNameAllowedCharsRegex = /^[A-Za-z0-9-\s]+$/;
+
+  const validateField = (name, value, nextState = null) => {
+    const state = nextState || { ...formData, [name]: value };
+    let msg = "";
+    if (name === "name") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        msg = "Batch name is required";
+      } else if (!batchNameAllowedCharsRegex.test(trimmed)) {
+        msg = "Batch name can have letters, numbers and '-', '-' cannot be at beginning or end";
+      } else if (!/^[A-Za-z]/.test(trimmed)) {
+        // first character must be a letter (no number or '-')
+        msg = "Batch name cannot start with a number or '-'";
+      } else if (trimmed.endsWith("-")) {
+        msg = "'-' cannot be at the end of batch name";
+      }
+    }
+    if (name === "startingYear") {
+      if (!value) msg = "Starting year is required";
+      else {
+        const year = parseInt(value, 10);
+        if (isNaN(year)) msg = "Starting year must be a number";
+        else if (year < 2013 || year > 2099)
+          msg = "Starting year must be between 2013 and 2099";
+        else if (state.endingYear) {
+          const end = parseInt(state.endingYear, 10);
+          if (!isNaN(end)) {
+            if (year >= end)
+              msg = "Starting year should be smaller than ending year";
+            else if (end - year !== 4)
+              msg = "There should be exactly 4 years gap between starting and ending year";
+          }
+        }
+      }
+    }
+    if (name === "endingYear") {
+      if (!value) msg = "Ending year is required";
+      else {
+        const year = parseInt(value, 10);
+        if (isNaN(year)) msg = "Ending year must be a number";
+        else if (year < 2013 || year > 2099)
+          msg = "Ending year must be between 2013 and 2099";
+        else if (state.startingYear) {
+          const start = parseInt(state.startingYear, 10);
+          if (!isNaN(start)) {
+            if (start >= year)
+              msg = "Ending year must be greater than starting year";
+            else if (year - start !== 4)
+              msg = "There should be exactly 4 years gap between starting and ending year";
+          }
+        }
+      }
+    }
+    setErrors((prev) => ({ ...prev, [name]: msg }));
+    return msg;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const newState = { ...formData, [name]: value };
+    setFormData(newState);
+    validateField(name, value, newState);
+    if (name === "startingYear" && newState.endingYear) {
+      validateField("endingYear", newState.endingYear, newState);
+    }
+    if (name === "endingYear" && newState.startingYear) {
+      validateField("startingYear", newState.startingYear, newState);
+    }
   };
 
   const handleCloseAddNewModel = () => {
     setShowAddNewModel(false);
     setFormData(initialState);
+    setErrors({ name: "", startingYear: "", endingYear: "" });
   };
 
   const handleCloseUpdateModel = () => {
     setShowUpdateModel(false);
     setFormData(initialState);
+    setErrors({ name: "", startingYear: "", endingYear: "" });
   };
 
   const handleAddNew = (e) => {
@@ -54,6 +125,21 @@ const ManageBatch = () => {
         fetchData();
         setShowAddNewModel(false);
         return "Added successfully..";
+      },
+      error: (err) => {
+        console.log(err);
+        return err?.response?.data?.message || "Something went wrong !";
+      },
+    });
+  };
+
+  const handleDelete = (_id) => {
+    const promise = deleteBatches(_id);
+    toast.promise(promise, {
+      loading: "Deleting...",
+      success: () => {
+        fetchData();
+        return "Deleted successfully..";
       },
       error: (err) => {
         console.log(err);
@@ -187,20 +273,29 @@ const ManageBatch = () => {
                   <td>{i.startingYear}</td>
                   <td>{i.endingYear}</td>
                   <td>
-                    <button
-                      className="btn btn__warning"
-                      onClick={() => {
-                        setFormData({
-                            _id : i._id,
-                            name: i.name,
-                            startingYear: i.startingYear,
-                            endingYear : i.endingYear
-                        });
-                        setShowUpdateModel(true);
-                      }}
-                    >
-                      <FaEdit />
-                    </button>
+                    <div className="actions">
+                      <button
+                        className="btn btn__warning"
+                        onClick={() => {
+                          setFormData({
+                              _id : i._id,
+                              name: i.name,
+                              startingYear: i.startingYear,
+                              endingYear : i.endingYear
+                          });
+                          setErrors({ name: "", startingYear: "", endingYear: "" });
+                          setShowUpdateModel(true);
+                        }}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="btn btn__danger"
+                        onClick={() => handleDelete(i._id)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -233,6 +328,7 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="startingYear">Batch Starting Year</label>
@@ -245,6 +341,9 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.startingYear && (
+              <small className="text__danger">{errors.startingYear}</small>
+            )}
           </div>
 
           <div className="form-control">
@@ -258,6 +357,9 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.endingYear && (
+              <small className="text__danger">{errors.endingYear}</small>
+            )}
           </div>
           <div className="actions">
             <button
@@ -267,21 +369,32 @@ const ManageBatch = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.startingYear ||
+                !formData.endingYear ||
+                !!errors.name ||
+                !!errors.startingYear ||
+                !!errors.endingYear
+              }
+            >
               SUBMIT
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* UPDATE ALMIRAH FORM */}
+      {/* UPDATE BATCH FORM */}
       <Modal
-        title="UPDATE ALMIRAH"
+        title="UPDATE BATCH"
         show={showUpdateModel}
         onClose={handleCloseUpdateModel}
       >
         <form onSubmit={handleUpdate}>
-        <div className="form-control">
+          <div className="form-control">
             <label htmlFor="name">Batch Name</label>
             <input
               type="text"
@@ -292,6 +405,7 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="startingYear">Batch Starting Year</label>
@@ -304,6 +418,9 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.startingYear && (
+              <small className="text__danger">{errors.startingYear}</small>
+            )}
           </div>
 
           <div className="form-control">
@@ -317,6 +434,9 @@ const ManageBatch = () => {
               onChange={handleChange}
               required
             />
+            {errors.endingYear && (
+              <small className="text__danger">{errors.endingYear}</small>
+            )}
           </div>
           <div className="actions">
             <button
@@ -326,7 +446,18 @@ const ManageBatch = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.startingYear ||
+                !formData.endingYear ||
+                !!errors.name ||
+                !!errors.startingYear ||
+                !!errors.endingYear
+              }
+            >
               UPDATE
             </button>
           </div>
