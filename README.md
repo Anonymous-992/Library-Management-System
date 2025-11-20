@@ -78,12 +78,7 @@ Follow these steps to set up and run the project on your local machine:
      localhost:5173
      ```
 
-### 3.3 Admin Credentials
 
-Use the following credentials to access the admin panel of the application:
-
-- **Email:** admin@gmail.com
-- **Password:** admin
 
 ### 3.4 Note
 
