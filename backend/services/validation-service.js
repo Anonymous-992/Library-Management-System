@@ -52,7 +52,8 @@ const teacherValidationSchema = Joi.object({
     .max(30)
     .pattern(/^[A-Za-z\s]+$/),
   fatherName: Joi.string()
-    .required()
+    .optional()
+    .allow("", null)
     .max(30)
     .pattern(/^[A-Za-z\s]+$/),
   email: Joi.string().required().email(),

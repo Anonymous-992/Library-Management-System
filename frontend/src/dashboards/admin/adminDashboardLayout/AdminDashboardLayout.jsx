@@ -5,9 +5,10 @@ import {
   FaList,
   FaLock,
   FaUserAlt,
-  FaUsers,
+  FaUserGraduate,
   FaBookOpen,
 } from "react-icons/fa";
+import { GiTeacher } from "react-icons/gi";
 import { FcApproval } from "react-icons/fc";
 import { BiCategoryAlt } from "react-icons/bi";
 import { SiBookstack } from "react-icons/si";
@@ -67,13 +68,13 @@ const menu = [
         id: 1,
         text: "Students",
         link: "manage-students",
-        icon: <FaUsers />,
+        icon: <FaUserGraduate />,
       },
       {
         id: 2,
         text: "Teachers",
         link: "manage-teachers",
-        icon: <FaUsers />,
+        icon: <GiTeacher />,
       },
       {
         id: 3,

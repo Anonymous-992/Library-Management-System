@@ -29,10 +29,32 @@ const ManageTeacher = () => {
     email: "",
   };
   const [formData, setFormData] = useState(initialState);
+  const [errors, setErrors] = useState({ name: "", fatherName: "", email: "" });
+
+  const alphaRegex = /^[A-Za-z\s]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateField = (name, value) => {
+    let msg = "";
+    if (name === "name") {
+      if (!value.trim()) msg = "Name is required";
+      else if (!alphaRegex.test(value)) msg = "Only alphabetic characters allowed";
+    }
+    if (name === "fatherName") {
+      if (value && !alphaRegex.test(value)) msg = "Only alphabetic characters allowed";
+    }
+    if (name === "email") {
+      if (!value.trim()) msg = "Email is required";
+      else if (!emailRegex.test(value)) msg = "Enter a valid email";
+    }
+    setErrors((prev) => ({ ...prev, [name]: msg }));
+    return msg;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
 
   const handleCloseAddNewModel = () => {
@@ -215,7 +237,8 @@ const ManageTeacher = () => {
                   <td>
                     <img src={i.imagePath ? `${BASE_URL}/${i.imagePath}` : profileImage}  alt="avatar" className="avatar" />
                   </td>
-                  <td>{i.fatherName}</td>
+                  {/* show placeholder if fatherName missing */}
+                  <td>{i.fatherName ? i.fatherName : '----'}</td>
                   <td>{i.email}</td>
                   <td>{i.role}</td>
                   <td>
@@ -268,6 +291,7 @@ const ManageTeacher = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="fatherName">Father Name</label>
@@ -278,8 +302,10 @@ const ManageTeacher = () => {
               className="bg text__color"
               value={formData.fatherName}
               onChange={handleChange}
-              required
             />
+            {errors.fatherName && (
+              <small className="text__danger">{errors.fatherName}</small>
+            )}
           </div>
 
           <div className="form-control">
@@ -293,6 +319,7 @@ const ManageTeacher = () => {
               onChange={handleChange}
               required
             />
+            {errors.email && <small className="text__danger">{errors.email}</small>}
           </div>
           <div className="actions">
             <button
@@ -302,7 +329,17 @@ const ManageTeacher = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.email.trim() ||
+                !!errors.name ||
+                !!errors.email ||
+                !!errors.fatherName
+              }
+            >
               SUBMIT
             </button>
           </div>
@@ -311,7 +348,7 @@ const ManageTeacher = () => {
 
       {/* UPDATE ALMIRAH FORM */}
       <Modal
-        title="UPDATE ALMIRAH"
+        title="UPDATE TEACHER"
         show={showUpdateModel}
         onClose={handleCloseUpdateModel}
       >
@@ -327,6 +364,7 @@ const ManageTeacher = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="fatherName">Father Name</label>
@@ -337,8 +375,10 @@ const ManageTeacher = () => {
               className="bg text__color"
               value={formData.fatherName}
               onChange={handleChange}
-              required
             />
+            {errors.fatherName && (
+              <small className="text__danger">{errors.fatherName}</small>
+            )}
           </div>
 
           <div className="form-control">
@@ -352,6 +392,7 @@ const ManageTeacher = () => {
               onChange={handleChange}
               required
             />
+            {errors.email && <small className="text__danger">{errors.email}</small>}
           </div>
           <div className="actions">
             <button
@@ -361,7 +402,17 @@ const ManageTeacher = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.email.trim() ||
+                !!errors.name ||
+                !!errors.email ||
+                !!errors.fatherName
+              }
+            >
               UPDATE
             </button>
           </div>

@@ -31,10 +31,45 @@ const ManageStudent = () => {
     batch: "",
   };
   const [formData, setFormData] = useState(initialState);
+  const [errors, setErrors] = useState({ name: "", fatherName: "", email: "", rollNumber: "", batch: "", departement: "" });
+
+  const alphaRegex = /^[A-Za-z\s]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const rollRegex = /^(?!-)(?!.*-$)[A-Za-z0-9-]+$/; // alphanumeric and hyphen allowed, not at start or end
+
+  const validateField = (name, value) => {
+    let msg = "";
+    if (name === "name") {
+      if (!value.trim()) msg = "Name is required";
+      else if (!alphaRegex.test(value)) msg = "Only alphabetic characters allowed";
+    }
+    if (name === "fatherName") {
+      if (!value.trim()) msg = "Father Name is required";
+      else if (!alphaRegex.test(value)) msg = "Only alphabetic characters allowed";
+    }
+    if (name === "email") {
+      if (!value.trim()) msg = "Email is required";
+      else if (!emailRegex.test(value)) msg = "Enter a valid email";
+    }
+    if (name === "rollNumber") {
+      if (!value.trim()) msg = "Roll Number is required";
+      else if (value.startsWith("-") || value.endsWith("-")) msg = "Hyphen cannot be at the beginning or end";
+      else if (!rollRegex.test(value)) msg = "Only letters, numbers and '-' allowed";
+    }
+    if (name === "batch") {
+      if (!value) msg = "Batch is required";
+    }
+    if (name === "departement") {
+      if (!value) msg = "Departement is required";
+    }
+    setErrors((prev) => ({ ...prev, [name]: msg }));
+    return msg;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
 
   const handleCloseAddNewModel = () => {
@@ -317,6 +352,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="fatherName">Father Name</label>
@@ -329,6 +365,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.fatherName && <small className="text__danger">{errors.fatherName}</small>}
           </div>
 
           <div className="form-control">
@@ -342,6 +379,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.rollNumber && <small className="text__danger">{errors.rollNumber}</small>}
           </div>
 
           <div className="form-control">
@@ -355,6 +393,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.email && <small className="text__danger">{errors.email}</small>}
           </div>
 
           <div className="form-control">
@@ -376,6 +415,7 @@ const ManageStudent = () => {
                 );
               })}
             </select>
+            {errors.batch && <small className="text__danger">{errors.batch}</small>}
           </div>
 
           <div className="form-control">
@@ -397,6 +437,7 @@ const ManageStudent = () => {
                 );
               })}
             </select>
+            {errors.departement && <small className="text__danger">{errors.departement}</small>}
           </div>
 
           <div className="actions">
@@ -407,7 +448,24 @@ const ManageStudent = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.fatherName.trim() ||
+                !formData.email.trim() ||
+                !formData.rollNumber.trim() ||
+                !formData.batch ||
+                !formData.departement ||
+                !!errors.name ||
+                !!errors.fatherName ||
+                !!errors.email ||
+                !!errors.rollNumber ||
+                !!errors.batch ||
+                !!errors.departement
+              }
+            >
               SUBMIT
             </button>
           </div>
@@ -432,6 +490,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.name && <small className="text__danger">{errors.name}</small>}
           </div>
           <div className="form-control">
             <label htmlFor="fatherName">Father Name</label>
@@ -444,6 +503,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.fatherName && <small className="text__danger">{errors.fatherName}</small>}
           </div>
 
           <div className="form-control">
@@ -457,6 +517,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.rollNumber && <small className="text__danger">{errors.rollNumber}</small>}
           </div>
 
           <div className="form-control">
@@ -470,6 +531,7 @@ const ManageStudent = () => {
               onChange={handleChange}
               required
             />
+            {errors.email && <small className="text__danger">{errors.email}</small>}
           </div>
 
           <div className="form-control">
@@ -521,7 +583,24 @@ const ManageStudent = () => {
             >
               CANCEL
             </button>
-            <button type="submit" className="btn btn__success">
+            <button
+              type="submit"
+              className="btn btn__success"
+              disabled={
+                !formData.name.trim() ||
+                !formData.fatherName.trim() ||
+                !formData.email.trim() ||
+                !formData.rollNumber.trim() ||
+                !formData.batch ||
+                !formData.departement ||
+                !!errors.name ||
+                !!errors.fatherName ||
+                !!errors.email ||
+                !!errors.rollNumber ||
+                !!errors.batch ||
+                !!errors.departement
+              }
+            >
               UPDATE
             </button>
           </div>
