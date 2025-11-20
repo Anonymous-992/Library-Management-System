@@ -65,7 +65,7 @@ class TeacherController {
       const regexQueryEmail = new RegExp(req.query.qEmail || "", "i");
       const regexQueryName = new RegExp(req.query.qName || "", "i");
       const filter = [
-        { $or: [{ role: "Teacher" }] },
+        { $or: [{ role: { $in: ["Teacher", "HOD"] } }] },
         { name: { $regex: regexQueryName } },
         { email: { $regex: regexQueryEmail } },
       ];
@@ -136,7 +136,7 @@ class TeacherController {
 
   async exportTeachers(req, res, next) {
     try {
-      const data = await UserModel.find({ role: "Teacher" });
+      const data = await UserModel.find({ role: { $in: ["Teacher", "HOD"] } });
       if (data.length === 0) {
         return next(ErrorHandlerService.notFound("Data not found"));
       }
@@ -144,6 +144,7 @@ class TeacherController {
         { header: "Name", key: "name" },
         { header: "Father Name", key: "fatherName" },
         { header: "Email", key: "email" },
+        { header: "Role", key: "role" },
         { header: "Account Status", key: "accountStatus" },
       ];
       const fileName = "teachers.csv";

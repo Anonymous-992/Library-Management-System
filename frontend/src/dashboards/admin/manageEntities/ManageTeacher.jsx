@@ -203,6 +203,7 @@ const ManageTeacher = () => {
               <td>Image</td>
               <td>Father Name</td>
               <td>Email</td>
+              <td>Role</td>
               <td>Actions</td>
             </tr>
           </thead>
@@ -216,6 +217,7 @@ const ManageTeacher = () => {
                   </td>
                   <td>{i.fatherName}</td>
                   <td>{i.email}</td>
+                  <td>{i.role}</td>
                   <td>
                     <button
                       className="btn btn__warning"
