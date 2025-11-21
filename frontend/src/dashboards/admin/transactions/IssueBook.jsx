@@ -59,12 +59,14 @@ const IssueBook = () => {
       toast.error(`Limit exceeded !`);
       return;
     }
-    /* CHECK IF BOOK STATUS IS ISSUED ? */
-    if (bookData?.book?.status === "Issued") {
-      toast.error(`Book alraeady issued to someone!`);
+    const quantity =
+      typeof bookData?.book?.quantity === "number"
+        ? bookData.book.quantity
+        : 0;
+    if (quantity <= 0) {
+      toast.error("Book is currently unavailable!");
       return;
     }
-
     /* CHECK SAME USER RESERVED ? */
     if (bookData?.book?.status === "Reserved") {
       if (userData?.user?.email !== bookData?.reservedAlready?.user?.email) {
@@ -197,6 +199,19 @@ const IssueBook = () => {
               <tr>
                 <th>Author</th>
                 <td>{bookData?.book?.author}</td>
+              </tr>
+
+              <tr>
+                <th>Quantity Left</th>
+                <td>
+                  {bookData?.book?.quantity === 0 ? (
+                    <span className="badge badge__danger">Unavailable</span>
+                  ) : bookData?.book?.quantity === 1 ? (
+                    <span className="badge badge__warning">1 (Low)</span>
+                  ) : (
+                    bookData?.book?.quantity
+                  )}
+                </td>
               </tr>
 
               <tr>

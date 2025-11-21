@@ -28,6 +28,16 @@ const AdminHome = () => {
     return <Loader />;
   }
 
+  if (status === STATUSES.ERROR) {
+    return (
+      <div className="user__home__container">
+        <p className="alert alert__danger">
+          Failed to load admin dashboard stats. Please try again later.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="user__home__container">
       {/* COUNTER CARDS */}
@@ -97,13 +107,22 @@ const AdminHome = () => {
           </thead>
           <tbody>
             {data?.last5IssuedBooks?.map((transaction, index) => {
+              if (!transaction) return null;
+              const memberName = transaction.user?.name || "Unknown";
+              const bookTitle = transaction.book?.title || "Unknown";
+              const borrowDate = transaction.borrowDate
+                ? formatDate(transaction.borrowDate)
+                : "-";
+              const dueDate = transaction.dueDate
+                ? formatDate(transaction.dueDate)
+                : "-";
               return (
-                <tr key={transaction._id}>
+                <tr key={transaction._id || index}>
                   <td>{index + 1}</td>
-                  <td>{transaction.user.name}</td>
-                  <td>{transaction.book.title}</td>
-                  <td>{formatDate(transaction.borrowDate)}</td>
-                  <td>{formatDate(transaction.dueDate)}</td>
+                  <td>{memberName}</td>
+                  <td>{bookTitle}</td>
+                  <td>{borrowDate}</td>
+                  <td>{dueDate}</td>
                 </tr>
               );
             })}
@@ -134,13 +153,22 @@ const AdminHome = () => {
           </thead>
           <tbody>
             {data?.last5ReturnedBooks?.map((transaction, index) => {
+              if (!transaction) return null;
+              const memberName = transaction.user?.name || "Unknown";
+              const bookTitle = transaction.book?.title || "Unknown";
+              const borrowDate = transaction.borrowDate
+                ? formatDate(transaction.borrowDate)
+                : "-";
+              const returnedDate = transaction.returnedDate
+                ? formatDate(transaction.returnedDate)
+                : "-";
               return (
-                <tr key={transaction._id}>
+                <tr key={transaction._id || index}>
                   <td>{index + 1}</td>
-                  <td>{transaction.user.name}</td>
-                  <td>{transaction.book.title}</td>
-                  <td>{formatDate(transaction.borrowDate)}</td>
-                  <td>{formatDate(transaction.returnedDate)}</td>
+                  <td>{memberName}</td>
+                  <td>{bookTitle}</td>
+                  <td>{borrowDate}</td>
+                  <td>{returnedDate}</td>
                 </tr>
               );
             })}

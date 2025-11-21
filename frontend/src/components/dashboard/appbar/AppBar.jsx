@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { FiSun } from "react-icons/fi";
 import { toggleTheme } from "../../../store/slices/themeSlice";
 import { Link } from "react-router-dom";
+
 function AppBar({ open, setOpen }) {
  
   const dispatch = useDispatch();
@@ -28,8 +29,9 @@ function AppBar({ open, setOpen }) {
 
         {/* logo */}
         <Link to="/" className="logo text__primary">
-          <GiBookAura className="logo__icon" />
-          <span>UAJK Library</span>
+          {/* <GiBookAura className="logo__icon" /> */}
+          <img src="/logo.png" className="unilogo" alt="" />
+          <span><b>UAJK Library</b></span>
         </Link>
       </div>
 

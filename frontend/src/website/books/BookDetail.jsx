@@ -112,22 +112,43 @@ const BookDetail = () => {
           <p>
             {book?.totalReviews} Reviews | {book?.rating} out of 5
           </p>
-          <p style={{ display: "flex", columnGap: "5px" }}>
-            <span>Status : </span>{" "}
-            <span
-              className={`badge ${
-                book?.status === "Available"
-                  ? "badge__success"
-                  : book?.status === "Issued"
-                  ? "badge__danger"
-                  : book?.status === "Reserved"
-                  ? "badge__warning"
-                  : "badge__info"
-              }`}
-            >
-              {book?.status}
-            </span>
-          </p>
+          {(() => {
+            const qty = typeof book?.quantity === "number" ? book.quantity : null;
+            const isOffTheShelf = qty === 0;
+            const displayStatus = isOffTheShelf ? "Unavailable" : book?.status;
+            return (
+              <>
+                <p style={{ display: "flex", columnGap: "5px" }}>
+                  <span>Status : </span>{" "}
+                  <span
+                    className={`badge ${
+                      displayStatus === "Available"
+                        ? "badge__success"
+                        : displayStatus === "Issued"
+                        ? "badge__danger"
+                        : displayStatus === "Reserved"
+                        ? "badge__warning"
+                        : "badge__danger"
+                    }`}
+                  >
+                    {displayStatus}
+                  </span>
+                </p>
+                <p>
+                  <span>Quantity Left : </span>
+                  {qty === null ? (
+                    "N/A"
+                  ) : qty === 0 ? (
+                    <span className="badge badge__danger">Off the shelf</span>
+                  ) : qty === 1 ? (
+                    <span className="badge badge__warning">Low stock (1 copy left)</span>
+                  ) : (
+                    <span className="badge badge__success">{qty} copies available</span>
+                  )}
+                </p>
+              </>
+            );
+          })()}
           <p>
             <span>Category : </span>
             {book?.category?.name}
@@ -152,31 +173,47 @@ const BookDetail = () => {
           {/* CHECK USER IS LOGIN AND BOOK STATUS IS AVAILABE THEN ALLOW TO RESERVED BOOK */}
 
           <div className="action">
-            {book?.status === "Available" ? (
-              auth?.isAuth ? (
-                <div>
-                  <button
-                    className="btn btn__secondary"
-                    onClick={handleReservedBook}
-                  >
-                    RESERVE BOOK
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <h3>
-                    Login to reserve this book.{" "}
-                    <Link className="btn btn__primary" to="/login">
-                      Login
-                    </Link>
-                  </h3>
-                </div>
-              )
-            ) : (
-              <p className="badge badge__danger" style={{ width: "210px" }}>
-                This book is currently {book?.status}.
-              </p>
-            )}
+            {(() => {
+              const qty =
+                typeof book?.quantity === "number" ? book.quantity : null;
+              const canReserve = book?.status === "Available" && qty > 0;
+
+              if (canReserve) {
+                return auth?.isAuth ? (
+                  <div>
+                    <button
+                      className="btn btn__secondary"
+                      onClick={handleReservedBook}
+                    >
+                      RESERVE BOOK
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <h3>
+                      Login to reserve this book.{" "}
+                      <Link className="btn btn__primary" to="/login">
+                        Login
+                      </Link>
+                    </h3>
+                  </div>
+                );
+              }
+
+              if (qty === 0) {
+                return (
+                  <p className="badge badge__danger">
+                    This book is currently not on shelf.
+                  </p>
+                );
+              }
+
+              return (
+                <p className="badge badge__danger">
+                  This book is currently {book?.status}.
+                </p>
+              );
+            })()}
           </div>
         </div>
       </div>

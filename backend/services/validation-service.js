@@ -24,6 +24,7 @@ const bookValidationSchema = Joi.object({
   shelf: Joi.string().optional(),
   publisher: Joi.string().optional(),
   edition: Joi.string().optional(),
+  quantity: Joi.number().integer().min(0).optional(),
   description: Joi.string().optional().empty(),
   tags: Joi.string().optional(),
   status: Joi.string().optional(),

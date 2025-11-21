@@ -21,9 +21,27 @@ const AddNewBook = () => {
     shelf: "",
     image: "",
     edition: "",
+    quantity: "",
     description: "",
   };
   const [formData, setFormData] = useState(initailState);
+  const [errors, setErrors] = useState({ ISBN: "", quantity: "" });
+
+  const validateIsbn = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "ISBN is required";
+    if (!/^[0-9-]+$/.test(trimmed)) {
+      return "ISBN must contain only digits and hyphens";
+    }
+    if (trimmed.startsWith("-") || trimmed.endsWith("-")) {
+      return "Hyphen cannot be at the beginning or end";
+    }
+    const digitsOnly = trimmed.replace(/-/g, "");
+    if (!/^\d+$/.test(digitsOnly) || digitsOnly.length < 10 || digitsOnly.length > 13) {
+      return "ISBN must contain 10 to 13 digits";
+    }
+    return "";
+  };
 
   //   handle change into input fields
   const hanldeInputChange = (e) => {
@@ -31,12 +49,45 @@ const AddNewBook = () => {
     if (name === "image") {
       setFormData({ ...formData, [name]: files[0] });
     } else {
-      setFormData({ ...formData, [name]: e.target.value });
+      const value = e.target.value;
+      setFormData({ ...formData, [name]: value });
+
+      // basic inline validation for numeric quantity and ISBN format
+      if (name === "quantity") {
+        let msg = "";
+        const num = Number(value);
+        if (!value) {
+          msg = "Quantity is required";
+        } else if (!Number.isInteger(num) || num <= 0) {
+          msg = "Quantity must be a whole number greater than 0";
+        }
+        setErrors((prev) => ({ ...prev, quantity: msg }));
+      }
+
+      if (name === "ISBN") {
+        const msg = validateIsbn(value);
+        setErrors((prev) => ({ ...prev, ISBN: msg }));
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // final validation before submit
+    const quantityNum = Number(formData.quantity);
+    let isbnMsg = validateIsbn(formData.ISBN);
+    let qtyMsg = errors.quantity;
+
+    if (!formData.quantity) {
+      qtyMsg = "Quantity is required";
+    } else if (!Number.isInteger(quantityNum) || quantityNum <= 0) {
+      qtyMsg = "Quantity must be a whole number greater than 0";
+    }
+
+    if (isbnMsg || qtyMsg) {
+      setErrors({ ISBN: isbnMsg, quantity: qtyMsg });
+      return;
+    }
     const dataToPost = new FormData();
     for (const key in formData) {
       if (formData[key] !== "") {
@@ -50,6 +101,7 @@ const AddNewBook = () => {
       loading: "Creating...",
       success: (data) => {
         setFormData(initailState);
+        setErrors({ ISBN: "", quantity: "" });
         return "Book created successfully..";
       },
       error: (err) => {
@@ -89,6 +141,9 @@ const AddNewBook = () => {
                 value={formData.ISBN}
                 onChange={hanldeInputChange}
               />
+              {errors.ISBN && (
+                <small className="text__danger">{errors.ISBN}</small>
+              )}
             </div>
             <div className="form-control">
               <label htmlFor="title">Title</label>
@@ -208,6 +263,23 @@ const AddNewBook = () => {
                 value={formData.edition}
                 onChange={hanldeInputChange}
               />
+            </div>
+
+            <div className="form-control">
+              <label htmlFor="quantity">No. Of Copies</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Enter Quantity"
+                id="quantity"
+                name="quantity"
+                value={formData.quantity}
+                onChange={hanldeInputChange}
+                required
+              />
+              {errors.quantity && (
+                <small className="text__danger">{errors.quantity}</small>
+              )}
             </div>
             {/* tags */}
           </div>

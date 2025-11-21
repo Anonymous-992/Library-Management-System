@@ -123,8 +123,13 @@ const Books = () => {
           <div className="card__wrapper">
             {booksData?.books.length !== 0 ? (
               booksData?.books?.map((book) => {
+                const quantity =
+                  typeof book?.quantity === "number" ? book.quantity : 0;
                 return (
-                  <div className="card bg__accent">
+                  <div
+                    className="card bg__accent"
+                    onClick={() => {}}
+                  >
                     <img
                       src={
                         book?.imagePath
@@ -139,6 +144,15 @@ const Books = () => {
                       <Stars rating={book?.rating} />
                       <p>
                         {book?.totalReviews} Reviews | {book?.rating} out of 5
+                      </p>
+                      <p>
+                        {quantity === 0 ? (
+                          <span className="badge badge__danger">Off the shelf</span>
+                        ) : quantity === 1 ? (
+                          <span className="badge badge__warning">Low stock (1 copy left)</span>
+                        ) : (
+                          <span className="badge badge__success">{`${quantity} copies available`}</span>
+                        )}
                       </p>
                       <div className="action">
                         <Link

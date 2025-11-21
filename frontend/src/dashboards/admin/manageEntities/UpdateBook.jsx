@@ -24,9 +24,27 @@ const UpdateBook = () => {
     shelf: "",
     image: "",
     edition: "",
+    quantity: "",
     description: "",
   };
   const [formData, setFormData] = useState(initailState);
+  const [errors, setErrors] = useState({ ISBN: "" });
+
+  const validateIsbn = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "ISBN is required";
+    if (!/^[0-9-]+$/.test(trimmed)) {
+      return "ISBN must contain only digits and hyphens";
+    }
+    if (trimmed.startsWith("-") || trimmed.endsWith("-")) {
+      return "Hyphen cannot be at the beginning or end";
+    }
+    const digitsOnly = trimmed.replace(/-/g, "");
+    if (!/^\d+$/.test(digitsOnly) || digitsOnly.length < 10 || digitsOnly.length > 13) {
+      return "ISBN must contain 10 to 13 digits";
+    }
+    return "";
+  };
 
   //   handle change into input fields
   const hanldeInputChange = (e) => {
@@ -34,12 +52,24 @@ const UpdateBook = () => {
     if (name === "image") {
       setFormData({ ...formData, [name]: files[0] });
     } else {
-      setFormData({ ...formData, [name]: e.target.value });
+      const value = e.target.value;
+      setFormData({ ...formData, [name]: value });
+
+      if (name === "ISBN") {
+        const msg = validateIsbn(value);
+        setErrors((prev) => ({ ...prev, ISBN: msg }));
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const isbnMsg = validateIsbn(formData.ISBN);
+    if (isbnMsg) {
+      setErrors((prev) => ({ ...prev, ISBN: isbnMsg }));
+      toast.error("Please fix ISBN before submitting.");
+      return;
+    }
     const dataToPost = new FormData();
     for (const key in formData) {
       if (formData[key] !== "") {
@@ -66,16 +96,19 @@ const UpdateBook = () => {
       try {
         const { data: bookData } = await getBook(_id);
         setFormData({
-            ISBN : bookData.ISBN,
-            title : bookData.title,
-            category : bookData?.category?._id,
-            almirah : bookData?.almirah?._id,
-            author : bookData?.author,
-            publisher : bookData?.publisher,
-            shelf : bookData?.shelf,
-            edition  : bookData?.edition,
-            description : bookData?.description
-
+          ISBN: bookData.ISBN,
+          title: bookData.title,
+          category: bookData?.category?._id,
+          almirah: bookData?.almirah?._id,
+          author: bookData?.author,
+          publisher: bookData?.publisher,
+          shelf: bookData?.shelf,
+          edition: bookData?.edition,
+          quantity:
+            typeof bookData?.quantity === "number"
+              ? String(bookData.quantity)
+              : "",
+          description: bookData?.description,
         });
         const { data: categoriesData } =
           await getAllCategoriesWithoutPagination();
@@ -104,6 +137,9 @@ const UpdateBook = () => {
                 value={formData.ISBN}
                 onChange={hanldeInputChange}
               />
+              {errors.ISBN && (
+                <small className="text__danger">{errors.ISBN}</small>
+              )}
             </div>
             <div className="form-control">
               <label htmlFor="title">Title</label>
@@ -222,6 +258,20 @@ const UpdateBook = () => {
                 name="edition"
                 value={formData.edition}
                 onChange={hanldeInputChange}
+              />
+            </div>
+
+            <div className="form-control">
+              <label htmlFor="quantity">Quantity</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="Enter Quantity"
+                id="quantity"
+                name="quantity"
+                value={formData.quantity}
+                onChange={hanldeInputChange}
+                required
               />
             </div>
             {/* tags */}

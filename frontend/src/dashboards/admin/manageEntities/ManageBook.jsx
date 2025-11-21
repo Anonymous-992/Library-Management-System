@@ -138,19 +138,46 @@ const ManageBook = () => {
               <td>ISBN</td>
               <td>Title</td>
               <td>Author</td>
+              <td>Quantity</td>
               <td>Status</td>
               <td>Actions</td>
             </tr>
           </thead>
           <tbody>
             {data?.books?.map((i) => {
+              const quantity =
+                typeof i?.quantity === "number" ? i.quantity : 0;
+              const isOffTheShelf = quantity === 0;
+              const effectiveStatus = isOffTheShelf ? "Unavailable" : i.status;
               return (
                 <tr key={i._id}>
                   <td>{i.ISBN}</td>
                   <td>{i.title}</td>
                   <td>{i.author}</td>
-                 
-                  <td><span className={`badge ${i.status==="Available" ? "badge__success" : i.status === "Issued" ? "badge__danger" : i.status === "Reserved" ? "badge__warning" : "badge__info"}`}>{i.status}</span></td>
+                  <td>
+                    {quantity === 0 ? (
+                      <span className="badge badge__danger">Off the shelf</span>
+                    ) : quantity === 1 ? (
+                      <span className="badge badge__warning">Low stock (1 copy left)</span>
+                    ) : (
+                      quantity
+                    )}
+                  </td>
+                  <td>
+                    <span
+                      className={`badge ${
+                        effectiveStatus === "Available"
+                          ? "badge__success"
+                          : effectiveStatus === "Issued"
+                          ? "badge__danger"
+                          : effectiveStatus === "Reserved"
+                          ? "badge__warning"
+                          : "badge__danger"
+                      }`}
+                    >
+                      {effectiveStatus}
+                    </span>
+                  </td>
                   <td>
                     <div className="actions">
                       <button

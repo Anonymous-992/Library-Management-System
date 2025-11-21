@@ -172,9 +172,20 @@ class BookController {
       if (!document) {
         return next(ErrorHandlerService.notFound("Book Not Found"));
       }
-      document.isDeleted = true;
-      await document.save();
-      return res.status(204).json({ message: "Book Deleted Successfull" });
+
+      const imagePath = document.imagePath;
+
+      await BookModel.deleteOne({ _id: document._id });
+
+      if (imagePath) {
+        try {
+          deleteFile(imagePath);
+        } catch (error) {
+          console.log("Error while deleting book image:", error.message);
+        }
+      }
+
+      return res.status(204).json({ message: "Book Deleted Successfully" });
     } catch (error) {
       next(error);
     }

@@ -45,7 +45,8 @@ const Header = () => {
 
       <nav className="bg__accent">
         <div className="logo text__primary">
-          <GiBookAura className="logo__icon" />
+          {/* <GiBookAura className="logo__icon" /> */}
+          <img src="/logo.png" className="unilogo" alt="" />
           <span>Neelum Campus Library</span>
         </div>
         <div className="center">

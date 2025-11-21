@@ -30,6 +30,37 @@ import {
   renewHandleSchema,
 } from "../services/validation-service.js";
 
+const getSafeQuantity = (value) =>
+  typeof value === "number" && !Number.isNaN(value) ? value : 0;
+
+const updateBookStatus = async (bookId) => {
+  const book = await BookModel.findById(bookId);
+  if (!book) return;
+  if (book.status === "Lost") {
+    return;
+  }
+  const currentQuantity = getSafeQuantity(book.quantity);
+  const [reservationsCount, activeBorrowCount] = await Promise.all([
+    ReservationModel.countDocuments({ book: bookId }),
+    TransactionModel.countDocuments({ book: bookId, isBorrowed: true }),
+  ]);
+
+  if (currentQuantity > 0) {
+    book.status =
+      reservationsCount >= currentQuantity ? "Reserved" : "Available";
+  } else {
+    if (reservationsCount > 0) {
+      book.status = "Reserved";
+    } else if (activeBorrowCount > 0) {
+      book.status = "Issued";
+    } else {
+      book.status = "Available";
+    }
+  }
+
+  await book.save();
+};
+
 class TransactionController {
   async adminDashboardStats(req, res, next) {
     try {
@@ -147,32 +178,36 @@ class TransactionController {
         return next(ErrorHandlerService.notFound("Book Not Found"));
       }
 
-      /* CHECK BOOK STATUS IS ISSUED OR LOST */
-      if (book.status === "Issued" || book.status === "Lost") {
+      const currentQuantity = getSafeQuantity(book.quantity);
+
+      if (book.status === "Lost") {
+        return next(
+          ErrorHandlerService.badRequest("OOPS ! This book is lost!")
+        );
+      }
+
+      if (currentQuantity <= 0) {
         return next(
           ErrorHandlerService.badRequest(
-            `${
-              book.status === "Issued"
-                ? "OOPS ! Book is already Issued"
-                : "OOPS ! This book is lost!"
-            }`
+            "OOPS ! Book is currently unavailable"
           )
         );
       }
       /* CHECK BOOK STATUS IS RESERVED . THEN CHECK IF SAME STUDENT WANT TO ISSUE BOOK THEN REMOVE BOOK FROM RESERVATION  */
-      if (book.status === "Reserved") {
-        const reservedBook = await ReservationModel.findOne({
-          book: book._id,
-        }).populate("user");
-        // console.log(reservedBook);
-        if (user.email === reservedBook?.user?.email) {
-          // console.log("Same user reserved book");
-          await reservedBook.deleteOne();
-        } else {
-          return next(
-            ErrorHandlerService.badRequest("Book Reserved by someone !")
-          );
-        }
+      const reservations = await ReservationModel.find({
+        book: book._id,
+      }).populate("user");
+      const userReservation = reservations.find(
+        (reservation) =>
+          reservation?.user &&
+          String(reservation.user._id) === String(user._id)
+      );
+      const isFullyReservedForOthers =
+        reservations.length >= currentQuantity && !userReservation;
+      if (isFullyReservedForOthers) {
+        return next(
+          ErrorHandlerService.badRequest("Book Reserved by someone !")
+        );
       }
 
       /* SET DUE DATE ACCORDING TO USER ROLE : STUDENT ALLOW 7 DAYS AND TEACHERS ALLOW 10 DAYS */
@@ -196,8 +231,13 @@ class TransactionController {
       });
       await transaction.save();
       /* CHANGE STAUTUS OF BOOK  */
-      book.status = "Issued";
+      const newQuantity = currentQuantity - 1;
+      book.quantity = newQuantity < 0 ? 0 : newQuantity;
+      if (userReservation) {
+        await userReservation.deleteOne();
+      }
       await book.save();
+      await updateBookStatus(book._id);
       return res.status(200).json({ msg: "Book Issued Successfully !" });
     } catch (error) {
       next(error);
@@ -266,7 +306,7 @@ class TransactionController {
     try {
       const book = await BookModel.findOne(
         { ISBN: qISBN },
-        "ISBN status title author"
+        "ISBN status title author quantity"
       );
       if (!book) {
         return next(ErrorHandlerService.notFound("Book Not Found"));
@@ -317,9 +357,15 @@ class TransactionController {
       transaction.returnedDate = new Date();
       await transaction.save();
       /* ALSO CHANGED BOOK STATUS FROM ISSUED TO AVAILABE */
-      await BookModel.findByIdAndUpdate(transaction.book, {
-        status: "Available",
-      });
+      const book = await BookModel.findById(transaction.book);
+      if (book) {
+        const currentQuantity =
+          typeof book.quantity === "number" ? book.quantity : 0;
+        const newQuantity = currentQuantity + 1;
+        book.quantity = newQuantity;
+        await book.save();
+        await updateBookStatus(book._id);
+      }
 
       return res.status(200).json({ msg: "Book Returned Successfully !" });
     } catch (error) {
@@ -673,9 +719,29 @@ class TransactionController {
       if (!book) {
         return next(ErrorHandlerService.notFound("Book not found"));
       }
-      if (book.status === "Reserved" || book.status === "Issued") {
+      const currentQuantity = getSafeQuantity(book.quantity);
+      if (currentQuantity <= 0) {
         return next(
-          ErrorHandlerService.forbidden(`Book already ${book.status}.`)
+          ErrorHandlerService.forbidden("Book is currently unavailable.")
+        );
+      }
+
+      const existingUserReservation = await ReservationModel.findOne({
+        user: _id,
+        book: book._id,
+      });
+      if (existingUserReservation) {
+        return next(
+          ErrorHandlerService.badRequest("You already reserved this book.")
+        );
+      }
+
+      const totalReservationsForBook = await ReservationModel.countDocuments({
+        book: book._id,
+      });
+      if (totalReservationsForBook >= currentQuantity) {
+        return next(
+          ErrorHandlerService.forbidden("Book is currently fully reserved.")
         );
       }
 
@@ -683,8 +749,7 @@ class TransactionController {
       const reservedBook = new ReservationModel({ user: _id, book: book._id });
       await reservedBook.save();
       /* CHANGE STATUS OF BOOK */
-      book.status = "Reserved";
-      await book.save();
+      await updateBookStatus(book._id);
 
       return res
         .status(201)
@@ -745,9 +810,10 @@ class TransactionController {
         return next(ErrorHandlerService.notFound("Transaction not found !"));
       }
       /* CHANGE BOOK STATUS FROM RESERVED TO AVAILABLE */
-      const book = await BookModel.findByIdAndUpdate(reservationBook.book, {
-        status: "Available",
-      });
+      const book = await BookModel.findById(reservationBook.book);
+      if (book) {
+        await updateBookStatus(book._id);
+      }
 
       const reservedBooks = await ReservationModel.find({
         user: req.userData._id,

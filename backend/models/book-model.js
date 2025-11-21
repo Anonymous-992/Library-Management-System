@@ -59,6 +59,11 @@ const bookSchema = new mongoose.Schema({
         enum : ["Available","Reserved","Issued","Lost"],
         default : "Available"
     },
+    quantity: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
     isDeleted : {
         type : Boolean,
         default : false

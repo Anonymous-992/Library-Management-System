@@ -226,11 +226,13 @@ body {
   color: white;
   display: flex;
   justify-content: center;
-  width: 100px;
+  min-width: 120px;
+  width: auto;
+  white-space: nowrap;
 }
 
 .badge__sm{
-  width: 50px;
+  min-width: 50px;
 }
 
 .badge__success {
