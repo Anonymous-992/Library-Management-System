@@ -103,15 +103,15 @@ const EBookDetail = () => {
           </p>
           <p>
             <span>Edition : </span>
-            {book?.edition}
+            {book?.edition || ""}
           </p>
           <p>
             <span>Publisher : </span>
-            {book?.publisher}
+            {book?.publisher || ""}
           </p>
           <p>
             <span>Description :</span>
-            {book?.description}
+            {book?.description || ""}
           </p>
 
           <div className="action">

@@ -159,15 +159,15 @@ const BookDetail = () => {
           </p>
           <p>
             <span>Edition : </span>
-            {book?.edition}
+            {book?.edition || ""}
           </p>
           <p>
             <span>Publisher : </span>
-            {book?.publisher}
+            {book?.publisher || ""}
           </p>
           <p>
             <span>Description :</span>
-            {book?.description}
+            {book?.description || ""}
           </p>
 
           {/* CHECK USER IS LOGIN AND BOOK STATUS IS AVAILABE THEN ALLOW TO RESERVED BOOK */}

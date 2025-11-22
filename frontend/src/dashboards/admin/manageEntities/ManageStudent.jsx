@@ -20,6 +20,8 @@ const ManageStudent = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [showAddNewModel, setShowAddNewModel] = useState(false);
   const [showUpdateModel, setShowUpdateModel] = useState(false);
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const navigate = useNavigate();
   const initialState = {
     _id: "",
@@ -105,6 +107,16 @@ const ManageStudent = () => {
         return err?.response?.data?.message || "Something went wrong !";
       },
     });
+  };
+
+  const handleCloseDeleteModel = () => {
+    setShowDeleteModel(false);
+    setSelectedStudent(null);
+  };
+
+  const openDeleteModal = (student) => {
+    setSelectedStudent(student);
+    setShowDeleteModel(true);
   };
 
   const handleDelete = (_id) => {
@@ -322,7 +334,7 @@ const ManageStudent = () => {
                       <button
                         className="btn btn__danger"
                         onClick={() => {
-                          handleDelete(i._id);
+                          openDeleteModal(i);
                         }}
                       >
                         <FaTrash />
@@ -341,6 +353,45 @@ const ManageStudent = () => {
         setCurrentPage={setCurrentPage}
         data={data}
       />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        title="DELETE STUDENT"
+        show={showDeleteModel}
+        onClose={handleCloseDeleteModel}
+      >
+        <div className="form-control">
+          <p>
+            Are you sure you want to delete
+            {" "}
+            <span className="text__danger">
+              {selectedStudent?.name || "this student"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="btn btn__secondary"
+            type="button"
+            onClick={handleCloseDeleteModel}
+          >
+            NO, CANCEL
+          </button>
+          <button
+            className="btn btn__danger"
+            type="button"
+            onClick={() => {
+              if (selectedStudent?._id) {
+                handleDelete(selectedStudent._id);
+              }
+              handleCloseDeleteModel();
+            }}
+          >
+            YES, DELETE
+          </button>
+        </div>
+      </Modal>
 
       {/* ADD NEW Batch FORM */}
       <Modal

@@ -7,7 +7,7 @@ import {
 
 import { toast } from "react-hot-toast";
 import { FaEdit, FaEye, FaTrash } from "react-icons/fa";
-import {  Pagination } from "../../../components";
+import { Modal, Pagination } from "../../../components";
 import { Link, useNavigate } from "react-router-dom";
 
 const ManageEBook = () => {
@@ -16,6 +16,8 @@ const ManageEBook = () => {
   const [data, setData] = useState({});
   const [isFirstRender, setIsFirstRender] = useState(true);
   const navigate = useNavigate();
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
  
 
   const handleDelete = (_id) => {
@@ -30,6 +32,16 @@ const ManageEBook = () => {
         return err?.response?.data?.message || "Something went wrong !";
       },
     });
+  };
+
+  const handleCloseDeleteModel = () => {
+    setShowDeleteModel(false);
+    setSelectedBook(null);
+  };
+
+  const openDeleteModal = (book) => {
+    setSelectedBook(book);
+    setShowDeleteModel(true);
   };
 
   const handleExport = () => {
@@ -172,7 +184,7 @@ const ManageEBook = () => {
                       <button
                         className="btn btn__danger"
                         onClick={() => {
-                          handleDelete(i._id);
+                          openDeleteModal(i);
                         }}
                       >
                         <FaTrash />
@@ -191,6 +203,46 @@ const ManageEBook = () => {
         setCurrentPage={setCurrentPage}
         data={data}
       />
+      {/* DELETE CONFIRMATION MODAL */}
+      <div>
+        <Modal
+          title="DELETE EBOOK"
+          show={showDeleteModel}
+          onClose={handleCloseDeleteModel}
+        >
+          <div className="form-control">
+            <p>
+              Are you sure you want to delete
+              {" "}
+              <span className="text__danger">
+                {selectedBook?.title || "this ebook"}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          </div>
+          <div className="actions">
+            <button
+              className="btn btn__secondary"
+              type="button"
+              onClick={handleCloseDeleteModel}
+            >
+              NO, CANCEL
+            </button>
+            <button
+              className="btn btn__danger"
+              type="button"
+              onClick={() => {
+                if (selectedBook?._id) {
+                  handleDelete(selectedBook._id);
+                }
+                handleCloseDeleteModel();
+              }}
+            >
+              YES, DELETE
+            </button>
+          </div>
+        </Modal>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 @import "../../../scss/responsive.scss";
+@import "../../../scss/variables.scss";
 
 .issue__book{
     padding: 10px 20px; 
@@ -39,7 +40,103 @@
             input{
                 margin-bottom: 5px;
             }
+
+            .form-control{
+                position: relative;
+
+                &.autocomplete{
+                    input{
+                        width: 100%;
+                    }
+
+                    .autocomplete__list{
+                        position: absolute;
+                        top: 100%;
+                        left: 0;
+                        right: 0;
+                        background-color: $dark-background-accent;
+                        color: $dark-text-color;
+                        max-height: 240px;
+                        overflow-y: auto;
+                        border-radius: 4px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                        z-index: 50;
+                        margin-top: 4px;
+
+                        li{
+                            padding: 8px 10px;
+                            cursor: pointer;
+                            display: flex;
+                            flex-direction: column;
+                            row-gap: 2px;
+                            transition: $default-transition;
+                            color: #ffffff;
+
+                            &:hover{
+                                background-color: $green-accent;
+                                color: #ffffff;
+                            }
+
+                            .primary{
+                                font-weight: 500;
+                                font-size: 15px;
+                            }
+
+                            .secondary{
+                                font-size: 13px;
+                                opacity: 0.85;
+                            }
+                        }
+                    }
+
+                    .autocomplete__list--books{
+                        li{
+                            padding: 6px 8px;
+                        }
+
+                        .book__suggestion{
+                            display: flex;
+                            align-items: center;
+                            column-gap: 10px;
+
+                            img{
+                                width: 40px;
+                                height: 55px;
+                                object-fit: cover;
+                                border-radius: 3px;
+                                flex-shrink: 0;
+                            }
+
+                            .content{
+                                display: flex;
+                                flex-direction: column;
+                                row-gap: 2px;
+
+                                .title{
+                                    font-weight: 500;
+                                    font-size: 14px;
+                                }
+
+                                .meta{
+                                    font-size: 12px;
+                                    opacity: 0.85;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
+}
+
+/* Override global form-control span color for autocomplete suggestions */
+.issue__book {
+  .form-control.autocomplete {
+    .autocomplete__list span {
+      color: #ffffff !important;
+      font-size: 14px;
+    }
+  }
 }

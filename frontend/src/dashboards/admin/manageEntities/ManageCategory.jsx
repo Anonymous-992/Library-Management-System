@@ -4,6 +4,7 @@ import {
   exportCategories,
   getAllCategories,
   updateCategory,
+  deleteCategory,
 } from "../../../http";
 import { toast } from "react-hot-toast";
 import { FaEdit, FaEye, FaTrash } from "react-icons/fa";
@@ -16,6 +17,8 @@ const ManageCategory = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [showAddNewModel, setShowAddNewModel] = useState(false);
   const [showUpdateModel, setShowUpdateModel] = useState(false);
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const initialState = {
     _id: "",
@@ -37,6 +40,11 @@ const ManageCategory = () => {
   const handleCloseUpdateModel = () => {
     setShowUpdateModel(false);
     setFormData(initialState);
+  };
+
+  const handleCloseDeleteModel = () => {
+    setShowDeleteModel(false);
+    setSelectedCategory(null);
   };
 
   const handleAddNew = (e) => {
@@ -102,6 +110,26 @@ const ManageCategory = () => {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const handleDelete = (_id) => {
+    const promise = deleteCategory(_id);
+    toast.promise(promise, {
+      loading: "deleting...",
+      success: (data) => {
+        fetchCategoires();
+        return "Category deleted successfully..";
+      },
+      error: (err) => {
+        console.log(err);
+        return err?.response?.data?.message || "Something went wrong !";
+      },
+    });
+  };
+
+  const openDeleteModal = (category) => {
+    setSelectedCategory(category);
+    setShowDeleteModel(true);
   };
 
   useEffect(() => {
@@ -197,9 +225,14 @@ const ManageCategory = () => {
                     >
                       <FaEdit />
                     </button>
-                    {/* <button className="btn btn__danger">
+                    <button
+                      className="btn btn__danger"
+                      onClick={() => {
+                        openDeleteModal(category);
+                      }}
+                    >
                       <FaTrash />
-                    </button> */}
+                    </button>
                   </td>
                 </tr>
               );
@@ -213,6 +246,45 @@ const ManageCategory = () => {
         setCurrentPage={setCurrentPage}
         data={data}
       />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        title="DELETE CATEGORY"
+        show={showDeleteModel}
+        onClose={handleCloseDeleteModel}
+      >
+        <div className="form-control">
+          <p>
+            Are you sure you want to delete
+            {" "}
+            <span className="text__danger">
+              {selectedCategory?.name || "this category"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="btn btn__secondary"
+            type="button"
+            onClick={handleCloseDeleteModel}
+          >
+            NO, CANCEL
+          </button>
+          <button
+            className="btn btn__danger"
+            type="button"
+            onClick={() => {
+              if (selectedCategory?._id) {
+                handleDelete(selectedCategory._id);
+              }
+              handleCloseDeleteModel();
+            }}
+          >
+            YES, DELETE
+          </button>
+        </div>
+      </Modal>
 
       {/* ADD NEW CATEGORY FORM */}
       <Modal

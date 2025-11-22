@@ -17,6 +17,8 @@ const ManageBatch = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [showAddNewModel, setShowAddNewModel] = useState(false);
   const [showUpdateModel, setShowUpdateModel] = useState(false);
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
 
   const initialState = {
     _id: "",
@@ -111,6 +113,11 @@ const ManageBatch = () => {
     setErrors({ name: "", startingYear: "", endingYear: "" });
   };
 
+  const handleCloseDeleteModel = () => {
+    setShowDeleteModel(false);
+    setSelectedBatch(null);
+  };
+
   const handleAddNew = (e) => {
     e.preventDefault();
     const promise = addNewBatch({
@@ -131,6 +138,11 @@ const ManageBatch = () => {
         return err?.response?.data?.message || "Something went wrong !";
       },
     });
+  };
+
+  const openDeleteModal = (batch) => {
+    setSelectedBatch(batch);
+    setShowDeleteModel(true);
   };
 
   const handleDelete = (_id) => {
@@ -291,7 +303,7 @@ const ManageBatch = () => {
                       </button>
                       <button
                         className="btn btn__danger"
-                        onClick={() => handleDelete(i._id)}
+                        onClick={() => openDeleteModal(i)}
                       >
                         <FaTrash />
                       </button>
@@ -309,6 +321,45 @@ const ManageBatch = () => {
         setCurrentPage={setCurrentPage}
         data={data}
       />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        title="DELETE BATCH"
+        show={showDeleteModel}
+        onClose={handleCloseDeleteModel}
+      >
+        <div className="form-control">
+          <p>
+            Are you sure you want to delete
+            {" "}
+            <span className="text__danger">
+              {selectedBatch?.name || "this batch"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="btn btn__secondary"
+            type="button"
+            onClick={handleCloseDeleteModel}
+          >
+            NO, CANCEL
+          </button>
+          <button
+            className="btn btn__danger"
+            type="button"
+            onClick={() => {
+              if (selectedBatch?._id) {
+                handleDelete(selectedBatch._id);
+              }
+              handleCloseDeleteModel();
+            }}
+          >
+            YES, DELETE
+          </button>
+        </div>
+      </Modal>
 
       {/* ADD NEW Batch FORM */}
       <Modal

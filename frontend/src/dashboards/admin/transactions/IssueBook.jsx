@@ -1,26 +1,95 @@
-import { useState } from "react";
+﻿import { useState, useRef } from "react";
 import "./issuebook.scss";
-import { getBookInfo, getUserInfo, issueBook } from "../../../http";
+import {
+  getBookInfo,
+  getUserInfo,
+  issueBook,
+  getAllStudents,
+  getAllBooks,
+  BASE_URL,
+} from "../../../http";
+import defaultCover from "../../../assets/cover404.jpg";
 import { toast } from "react-hot-toast";
 import { formatDate } from "../../../utils/formatDate";
 const IssueBook = () => {
   const [userData, setUserData] = useState(null);
   const [bookData, setBookData] = useState(null);
 
+  const [studentSuggestions, setStudentSuggestions] = useState([]);
+  const [activeStudentField, setActiveStudentField] = useState(null);
+  const studentSearchTimeout = useRef(null);
+
+  const [bookSuggestions, setBookSuggestions] = useState([]);
+  const bookSearchTimeout = useRef(null);
+
   const searchStudent = (e) => {
     e.preventDefault();
     const promise = getUserInfo({
       email: e.target.email.value,
-      rollNumber  : e.target.rollNumber.value,
+      rollNumber: e.target.rollNumber.value,
     });
     toast.promise(promise, {
       loading: "Loading...",
       success: (data) => {
         setUserData(data?.data);
+        setStudentSuggestions([]);
+        setActiveStudentField(null);
         /* CLEAR INPUT VALUE */
         e.target.email.value = "";
         e.target.rollNumber.value = "";
         return "Student searched successfully..";
+      },
+      error: (err) => {
+        console.log(err);
+        const msg = err?.response?.data?.message;
+        if (msg === "User Not Found") {
+          return "No result found";
+        }
+        return msg || "Something went wrong !";
+      },
+    });
+  };
+
+  const handleStudentInputChange = (e, field) => {
+    const value = e.target.value;
+    setActiveStudentField(field);
+
+    if (studentSearchTimeout.current) {
+      clearTimeout(studentSearchTimeout.current);
+    }
+
+    if (!value.trim()) {
+      setStudentSuggestions([]);
+      return;
+    }
+
+    studentSearchTimeout.current = setTimeout(async () => {
+      try {
+        const { data } = await getAllStudents(
+          field === "email" ? value : "",
+          "",
+          field === "rollNumber" ? value : "",
+          1
+        );
+        setStudentSuggestions(data?.students || []);
+      } catch (error) {
+        console.log(error);
+      }
+    }, 300);
+  };
+
+  const handleSelectStudentSuggestion = (student, field) => {
+    setStudentSuggestions([]);
+    setActiveStudentField(null);
+    const promise = getUserInfo({
+      email: field === "email" ? student?.email : "",
+      rollNumber: field === "rollNumber" ? student?.rollNumber : "",
+    });
+    toast.promise(promise, {
+      loading: "Loading...",
+      success: (data) => {
+        setUserData(data?.data);
+        return "Student selected successfully..";
       },
       error: (err) => {
         console.log();
@@ -31,15 +100,101 @@ const IssueBook = () => {
 
   const searchBook = (e) => {
     e.preventDefault();
+    const value = e.target.ISBN.value.trim();
+    if (!value) return;
+
+    const isISBNLike = /^[0-9-]+$/.test(value);
+
+    if (isISBNLike) {
+      const promise = getBookInfo({
+        ISBN: value,
+      });
+      toast.promise(promise, {
+        loading: "Loading...",
+        success: (data) => {
+          setBookData(data?.data);
+          setBookSuggestions([]);
+          e.target.ISBN.value = "";
+          return "Book searched successfully..";
+        },
+        error: (err) => {
+          console.log(err);
+          const msg = err?.response?.data?.message;
+          if (msg === "Book Not Found") {
+            return "No result found";
+          }
+          return msg || "Something went wrong !";
+        },
+      });
+    } else {
+      const promise = (async () => {
+        const { data } = await getAllBooks(
+          { ISBN: "", title: value, status: "", category: "" },
+          1,
+          1
+        );
+        const firstBook = data?.books?.[0];
+        if (!firstBook) {
+          const error = new Error("Book Not Found");
+          error.response = { data: { message: "Book Not Found" } };
+          throw error;
+        }
+        return getBookInfo({ ISBN: firstBook.ISBN });
+      })();
+
+      toast.promise(promise, {
+        loading: "Loading...",
+        success: (data) => {
+          setBookData(data?.data);
+          setBookSuggestions([]);
+          e.target.ISBN.value = "";
+          return "Book searched successfully..";
+        },
+        error: (err) => {
+          console.log();
+          return err?.response?.data?.message || "Something went wrong !";
+        },
+      });
+    }
+  };
+
+  const handleBookInputChange = (e) => {
+    const value = e.target.value;
+
+    if (bookSearchTimeout.current) {
+      clearTimeout(bookSearchTimeout.current);
+    }
+
+    if (!value.trim()) {
+      setBookSuggestions([]);
+      return;
+    }
+
+    bookSearchTimeout.current = setTimeout(async () => {
+      try {
+        const trimmed = value.trim();
+        const isISBNLike = /^[0-9-]+$/.test(trimmed);
+        const query = isISBNLike
+          ? { ISBN: trimmed, title: "", status: "", category: "" }
+          : { ISBN: "", title: trimmed, status: "", category: "" };
+        const { data } = await getAllBooks(query, 1, 5);
+        setBookSuggestions(data?.books || []);
+      } catch (error) {
+        console.log(error);
+      }
+    }, 300);
+  };
+
+  const handleSelectBookSuggestion = (book) => {
+    setBookSuggestions([]);
     const promise = getBookInfo({
-      ISBN: e.target.ISBN.value,
+      ISBN: book?.ISBN,
     });
     toast.promise(promise, {
       loading: "Loading...",
       success: (data) => {
         setBookData(data?.data);
-        e.target.ISBN.value = "";
-        return "Book searched successfully..";
+        return "Book selected successfully..";
       },
       error: (err) => {
         console.log();
@@ -88,7 +243,7 @@ const IssueBook = () => {
         return "Book Issued successfully..";
       },
       error: (err) => {
-        console.log();
+        console.log(err);
         return err?.response?.data?.message || "Something went wrong !";
       },
     });
@@ -102,15 +257,69 @@ const IssueBook = () => {
           <h3>Search Student</h3>
           <p>Find the user whom you want to issue books to.</p>
           <form onSubmit={searchStudent}>
-            <div className="form-control">
-              <input type="text" placeholder="Search by email" name="email" />
+            <div className="form-control autocomplete">
+              <input
+                type="text"
+                placeholder="Search by email"
+                name="email"
+                onChange={(e) => handleStudentInputChange(e, "email")}
+                onFocus={(e) => {
+                  if (e.target.value) {
+                    handleStudentInputChange(e, "email");
+                  }
+                }}
+              />
+              {activeStudentField === "email" &&
+                studentSuggestions.length > 0 && (
+                  <ul className="autocomplete__list">
+                    {studentSuggestions.map((student) => (
+                      <li
+                        key={student?._id}
+                        onMouseDown={() =>
+                          handleSelectStudentSuggestion(student, "email")
+                        }
+                      >
+                        <span className="primary">{student?.name}</span>
+                        <span className="secondary">
+                          {student?.email}
+                          {student?.rollNumber && `  ${student?.rollNumber}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
             </div>
-            <div className="form-control">
+            <div className="form-control autocomplete">
               <input
                 type="text"
                 placeholder="Search by roll number"
                 name="rollNumber"
+                onChange={(e) => handleStudentInputChange(e, "rollNumber")}
+                onFocus={(e) => {
+                  if (e.target.value) {
+                    handleStudentInputChange(e, "rollNumber");
+                  }
+                }}
               />
+              {activeStudentField === "rollNumber" &&
+                studentSuggestions.length > 0 && (
+                  <ul className="autocomplete__list">
+                    {studentSuggestions.map((student) => (
+                      <li
+                        key={student?._id}
+                        onMouseDown={() =>
+                          handleSelectStudentSuggestion(student, "rollNumber")
+                        }
+                      >
+                        <span className="primary">{student?.name}</span>
+                        <span className="secondary">
+                          {student?.rollNumber}
+                          {student?.email && `  ${student?.email}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
             </div>
             <button className="btn btn__secondary" type="submit">
               SEARCH
@@ -171,13 +380,39 @@ const IssueBook = () => {
           <h3>Search Book</h3>
           <p>Find the book you want to issue</p>
           <form onSubmit={searchBook}>
-            <div className="form-control">
+            <div className="form-control autocomplete">
               <input
                 type="text"
-                placeholder="Search by ISBN"
+                placeholder="Search by ISBN or title"
                 required
                 name="ISBN"
+                onChange={handleBookInputChange}
               />
+              {bookSuggestions.length > 0 && (
+                <ul className="autocomplete__list autocomplete__list--books">
+                  {bookSuggestions.map((book) => (
+                    <li
+                      key={book?._id}
+                      onMouseDown={() => handleSelectBookSuggestion(book)}
+                    >
+                      <div className="book__suggestion">
+                        <img
+                          src={
+                            book?.imagePath
+                              ? `${BASE_URL}/${book?.imagePath}`
+                              : defaultCover
+                          }
+                          alt={book?.title}
+                        />
+                        <div className="content">
+                          <span className="title">{book?.title}</span>
+                          <span className="meta">ISBN: {book?.ISBN}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <button className="btn btn__secondary" type="submit">
               SEARCH

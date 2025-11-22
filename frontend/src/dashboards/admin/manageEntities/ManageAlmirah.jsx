@@ -4,6 +4,7 @@ import {
   exportAlmirahs,
   getAllAlmirahs,
   updateAlmirah,
+  deleteAlmirah,
 } from "../../../http";
 import { toast } from "react-hot-toast";
 import { FaEdit, FaEye, FaTrash } from "react-icons/fa";
@@ -16,6 +17,8 @@ const ManageAlmirah = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [showAddNewModel, setShowAddNewModel] = useState(false);
   const [showUpdateModel, setShowUpdateModel] = useState(false);
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+  const [selectedAlmirah, setSelectedAlmirah] = useState(null);
 
   const initialState = {
     _id: "",
@@ -39,6 +42,11 @@ const ManageAlmirah = () => {
     setFormData(initialState);
   };
 
+  const handleCloseDeleteModel = () => {
+    setShowDeleteModel(false);
+    setSelectedAlmirah(null);
+  };
+
   const handleAddNew = (e) => {
     e.preventDefault();
     const promise = addNewAlmirah({
@@ -58,6 +66,25 @@ const ManageAlmirah = () => {
         return err?.response?.data?.message || "Something went wrong !";
       },
     });
+  };
+
+  const handleDelete = (_id) => {
+    const promise = deleteAlmirah(_id);
+    toast.promise(promise, {
+      loading: "deleting...",
+      success: (data) => {
+        fetchAlmirahs();
+        return "Almirah deleted successfully..";
+      },
+      error: (err) => {
+        return err?.response?.data?.message || "Something went wrong !";
+      },
+    });
+  };
+
+  const openDeleteModal = (almirah) => {
+    setSelectedAlmirah(almirah);
+    setShowDeleteModel(true);
   };
 
   const handleUpdate = (e) => {
@@ -195,6 +222,14 @@ const ManageAlmirah = () => {
                     >
                       <FaEdit />
                     </button>
+                    <button
+                      className="btn btn__danger"
+                      onClick={() => {
+                        openDeleteModal(i);
+                      }}
+                    >
+                      <FaTrash />
+                    </button>
                   </td>
                 </tr>
               );
@@ -208,6 +243,45 @@ const ManageAlmirah = () => {
         setCurrentPage={setCurrentPage}
         data={data}
       />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        title="DELETE ALMIRAH"
+        show={showDeleteModel}
+        onClose={handleCloseDeleteModel}
+      >
+        <div className="form-control">
+          <p>
+            Are you sure you want to delete
+            {" "}
+            <span className="text__danger">
+              {selectedAlmirah?.subject || "this almirah"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="btn btn__secondary"
+            type="button"
+            onClick={handleCloseDeleteModel}
+          >
+            NO, CANCEL
+          </button>
+          <button
+            className="btn btn__danger"
+            type="button"
+            onClick={() => {
+              if (selectedAlmirah?._id) {
+                handleDelete(selectedAlmirah._id);
+              }
+              handleCloseDeleteModel();
+            }}
+          >
+            YES, DELETE
+          </button>
+        </div>
+      </Modal>
 
       {/* ADD NEW CATEGORY FORM */}
       <Modal
