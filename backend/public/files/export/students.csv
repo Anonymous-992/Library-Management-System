@@ -1,2 +1,3 @@
-SNo,Name,Father Name,Roll Number,Email,Departement Name,Batch,Account Status
-1,Fawad,Zafar,2,fawad.bscs@gmail.com,BS Computer,Batch New,Active
+SNo.,Name,Father Name,Roll Number,Email,Departement Name,Batch,Account Status
+1,Bilal,Rana,nvc-00270,bilal.bscs@gmail.com,BS Computer Science,-,Active
+2,Fawad Zafar,Muzaffar Ali,2021-nvc-00270,fawad.bscs@gmail.com,BS Computer Science,Cs Batch,Active

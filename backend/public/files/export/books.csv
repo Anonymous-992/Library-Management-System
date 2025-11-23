@@ -1,8 +1,3 @@
 SNo,ISBN,Book Title,Book Author,Book Category,Almirah Number,Almirah Subject,Shelf,Edition,Publisher,Image URL
-1,1001,MERN Development,Fawad,Web,1,Computer Science,-,-,-,uploads\1760951951644-334729053.87975097.jpeg
-2,12345,C++ Advanced Programming,Fawad,Coding,1,Computer Science,1,6,-,uploads\1762067178164-756705380.9659749.jpg
-3,1003,Introduction to AI,Fawad,AI,1,Computer Science,2,-,123,uploads\1762067267653-790065629.3151966.png
-4,1002,English Literature By William J. Long,Fawad,Literature,1,Computer Science,-,-,-,uploads\1762067374451-350139298.62989277.webp
-5,10005,LINEAR ALGEBRA AND ITS APPLICATIONS,Fawad,Mathematics,1,Computer Science,2,-,123,uploads\1762067501409-300503477.01493704.png
-6,10034,Machine Learning for Beginners,Fawad,AI,1,Computer Science,4,13,gggg,uploads\1762067587835-719594917.0129902.jpg
-7,1003-@123,C++,Fawad,Coding,1,Computer Science,2,2050,-,-
+1,9822220888,MERN Development,Fawad,Web,1,Computer Science,2,undefined,undefined,uploads\1763794156812-599433643.3692429.png
+2,9808988788,C++,Fawad,Coding,1,Computer Science,-,-,-,uploads\1763795584234-589471946.8108588.jpg

@@ -1,8 +1,9 @@
 import ClearanceModel from "../models/clearance-form-model.js";
 import UserModel from "../models/user-model.js";
 import DepartementModel from "../models/departement-model.js";
-import { ErrorHandlerService, paginationService } from "../services/index.js";
+import { ErrorHandlerService, paginationService, sendMail } from "../services/index.js";
 import generateClearanceForm from "../services/clerance-form-pdf-genrator.js";
+import { buildClearanceStatusEmail } from "../services/email-template-service.js";
 
 class ClearanceController {
   async submitForm(req, res, next) {
@@ -229,6 +230,20 @@ class ClearanceController {
               // Disable student account after full approval
               student.accountStatus = "Disabled";
               await student.save();
+
+              // Notify student about approval
+              const html = buildClearanceStatusEmail({
+                name: student.name,
+                type: clearanceRequest.type,
+                status: "Approved",
+                requestId: clearanceRequest._id.toString(),
+              });
+              await sendMail({
+                to: student.email,
+                subject: "Your Clearance Request Has Been Approved",
+                text: `Your ${clearanceRequest.type} clearance request has been approved.`,
+                html,
+              });
             }
 
             await clearanceRequest.save();
@@ -247,6 +262,21 @@ class ClearanceController {
             clearanceRequest.status = "Rejected";
             clearanceRequest.rejectedReason = reason;
             await clearanceRequest.save();
+
+            // Notify student about rejection
+            const html = buildClearanceStatusEmail({
+              name: student.name,
+              type: clearanceRequest.type,
+              status: "Rejected",
+              requestId: clearanceRequest._id.toString(),
+              reason,
+            });
+            await sendMail({
+              to: student.email,
+              subject: "Your Clearance Request Has Been Rejected",
+              text: `Your ${clearanceRequest.type} clearance request has been rejected.`,
+              html,
+            });
           }
           break;
         case "HOD":
@@ -269,6 +299,20 @@ class ClearanceController {
               // Disable student account after full approval
               student.accountStatus = "Disabled";
               await student.save();
+
+              // Notify student about approval
+              const html = buildClearanceStatusEmail({
+                name: student.name,
+                type: clearanceRequest.type,
+                status: "Approved",
+                requestId: clearanceRequest._id.toString(),
+              });
+              await sendMail({
+                to: student.email,
+                subject: "Your Clearance Request Has Been Approved",
+                text: `Your ${clearanceRequest.type} clearance request has been approved.`,
+                html,
+              });
             }
 
             await clearanceRequest.save();
@@ -287,6 +331,21 @@ class ClearanceController {
             clearanceRequest.status = "Rejected";
             clearanceRequest.rejectedReason = reason;
             await clearanceRequest.save();
+
+            // Notify student about rejection
+            const html = buildClearanceStatusEmail({
+              name: student.name,
+              type: clearanceRequest.type,
+              status: "Rejected",
+              requestId: clearanceRequest._id.toString(),
+              reason,
+            });
+            await sendMail({
+              to: student.email,
+              subject: "Your Clearance Request Has Been Rejected",
+              text: `Your ${clearanceRequest.type} clearance request has been rejected.`,
+              html,
+            });
           }
           break;
         default:

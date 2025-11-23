@@ -151,11 +151,13 @@ const BookDetail = () => {
           })()}
           <p>
             <span>Category : </span>
-            {book?.category?.name}
+            {book?.category?.name || ""}
           </p>
           <p>
-            <span>Almirah :</span> {book?.almirah?.number} (
-            {book?.almirah?.subject})
+            <span>Almirah :</span> {(book?.almirah?.number || "")}
+            {book?.almirah?.subject
+              ? ` (${book.almirah.subject})`
+              : ""}
           </p>
           <p>
             <span>Edition : </span>

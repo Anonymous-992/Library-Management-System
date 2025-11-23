@@ -6,6 +6,7 @@ import {
   paginationService,
   exportToCSV,
 } from "../services/index.js";
+import { buildWelcomeEmail } from "../services/email-template-service.js";
 import { teacherValidationSchema } from "../services/validation-service.js";
 import bcrypt from "bcrypt";
 
@@ -39,18 +40,18 @@ class TeacherController {
 
       res.status(200).json({ teacher });
 
-      /* SEND WELCOME MAIL TO TEACHER AND ASK TO CHANGE THEIR PASSWORD */
+      /* SEND WELCOME MAIL TO TEACHER WITH LOGIN DETAILS */
+      const html = buildWelcomeEmail({
+        name: req.body.name,
+        role: "Teacher",
+        email: req.body.email,
+        password,
+      });
       await sendMail({
         to: req.body.email,
-        subject: `Welcome to UAJK Library Management System - Password Reset Required`,
-        text: `Dear ${req.body.name},
-                Welcome to the UAJK Neelum Campus Library ! Your account has been created by our admin.
-                Login Credentials:
-                Username/Email: ${req.body.email}
-                Default Password: ${password}
-                For security reasons, please reset your password immediately by login with above credentials.
-                Thank you for using UAJK Neelum Campus Library.
-                `,
+        subject: "Welcome to UAJK Neelum Campus Library Management System",
+        text: `Your library account has been created. Email: ${req.body.email}, Temporary password: ${password}`,
+        html,
       });
     } catch (error) {
       next(error);

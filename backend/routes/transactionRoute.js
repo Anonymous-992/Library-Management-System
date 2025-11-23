@@ -21,6 +21,7 @@ transactionRouter.get("/returned-books",authMiddleware,adminMiddleware,transacti
 
 transactionRouter.get("/renew-books",authMiddleware,adminMiddleware,transactionControllers.getRenewRequests);
 transactionRouter.post("/handle-renew-request",authMiddleware,adminMiddleware,transactionControllers.hanldeRenewRequest);
+transactionRouter.post("/send-overdue-reminders",authMiddleware,adminMiddleware,transactionControllers.sendOverdueReminders);
 
 /* FOR TEACHERS AND STUDENT */
 transactionRouter.get("/user-dashboard-stats",authMiddleware,transactionControllers.userDashboardStats);

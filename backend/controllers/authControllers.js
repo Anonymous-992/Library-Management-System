@@ -6,6 +6,7 @@ import {
   sendMail,
   tokenService,
 } from "../services/index.js";
+import { buildPasswordResetEmail } from "../services/email-template-service.js";
 import Jimp from "jimp";
 import {
   forgetPasswordValidationSchema,
@@ -195,12 +196,14 @@ class AuthController {
       await user.save();
 
       // send email
-      // console.log(`Email Send ! Your password reset link is ${resetToken}`);
+      const resetUrl = `http://localhost:5173/new-password/${resetToken}/`;
+      const html = buildPasswordResetEmail({ name: user.name, resetUrl });
       await sendMail({
         to: user.email,
         from: "neelumcampuslibrary@gmail.com",
         subject: "UAJK Library Password Reset Link",
-        text: `Hello ${user.name} ! Your password reset link is  http://localhost:5173/new-password/${resetToken}/, Click on that link in order to change password`,
+        text: `Use the following link to reset your password: ${resetUrl}`,
+        html,
       });
       return res.status(200).json({ msg: "Email send...." });
     } catch (error) {

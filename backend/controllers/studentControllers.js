@@ -5,13 +5,11 @@ import {
   paginationService,
   sendMail,
 } from "../services/index.js";
+import { buildWelcomeEmail } from "../services/email-template-service.js";
 import { studentValidationSchema } from "../services/validation-service.js";
 import bcrypt from "bcrypt";
 
-import csv from "fast-csv";
-import fs from "fs";
-import { ROOT_PATH } from "../server.js";
-import { BASE_URL } from "../config/index.js";
+import exportToCSV from "../services/export-to-csv-service.js";
 import DepartementModel from "../models/departement-model.js";
 import BatchModel from "../models/batch-model.js";
 
@@ -47,18 +45,19 @@ class StudentController {
       await student.save();
 
       res.status(200).json({ student });
-      /* SEND WELCOME MAIL TO TEACHER AND ASK TO CHANGE THEIR PASSWORD */
+      /* SEND WELCOME MAIL TO STUDENT WITH LOGIN DETAILS */
+      const html = buildWelcomeEmail({
+        name: req.body.name,
+        role: "Student",
+        email: req.body.email,
+        password,
+      });
       await sendMail({
         to: req.body.email,
-        subject: `Welcome to UAJK Neelum Campus Library Management System - Password Reset Required`,
-        text: `Dear ${req.body.name},
-                    Welcome to the UAJK Neelum Campus Library! Your account has been created by our admin.
-                    Login Credentials:
-                    Username/Email: ${req.body.email}
-                    Default Password: ${password}
-                    You can change your password by login into the system by using above credentials.
-                    Thank you for using UAJK Neelum Campus Library.
-                    `,
+        subject:
+          "Welcome to UAJK Neelum Campus Library Management System",
+        text: `Your library account has been created. Email: ${req.body.email}, Temporary password: ${password}`,
+        html,
       });
     } catch (error) {
       return next(error);
@@ -169,32 +168,27 @@ class StudentController {
         return next(ErrorHandlerService.notFound("Students not found"));
       }
 
-      const csvStream = csv.format({ headers: true });
-      const filePath = `${ROOT_PATH}/public/files/export/students.csv`;
-      const writablestream = fs.createWriteStream(filePath);
-      csvStream.pipe(writablestream);
-      writablestream.on("finish", function () {
-        res.json({
-          downloadUrl: `${BASE_URL}/public/files/export/students.csv`,
-        });
-      });
+      const rows = data.map((i) => ({
+        name: i.name || "-",
+        fatherName: i.fatherName || "-",
+        rollNumber: i.rollNumber || "-",
+        email: i.email || "-",
+        departementName: i.departement?.name || "-",
+        batchName: i.batch?.name || "-",
+        accountStatus: i.accountStatus || "-",
+      }));
 
-      if (data.length > 0) {
-        data.map((i, index) => {
-          csvStream.write({
-            SNo: index + 1,
-            Name: i.name || "-",
-            "Father Name": i.fatherName || "-",
-            "Roll Number": i.rollNumber || "-",
-            Email: i.email || "-",
-            "Departement Name": i.departement.name || "-",
-            Batch: i.batch.name,
-            "Account Status": i.accountStatus,
-          });
-        });
-      }
-      csvStream.end();
-      writablestream.end();
+      const columns = [
+        { header: "Name", key: "name" },
+        { header: "Father Name", key: "fatherName" },
+        { header: "Roll Number", key: "rollNumber" },
+        { header: "Email", key: "email" },
+        { header: "Departement Name", key: "departementName" },
+        { header: "Batch", key: "batchName" },
+        { header: "Account Status", key: "accountStatus" },
+      ];
+
+      exportToCSV(rows, columns, "students.csv", res);
     } catch (error) {
       next(error);
     }

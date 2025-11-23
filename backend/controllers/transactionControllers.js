@@ -25,6 +25,10 @@ import {
   sendMail,
 } from "../services/index.js";
 import {
+  buildRenewalStatusEmail,
+  buildOverdueReminderEmail,
+} from "../services/email-template-service.js";
+import {
   issuedBookSchema,
   renewBookSchema,
   renewHandleSchema,
@@ -539,24 +543,18 @@ class TransactionController {
 
       await transaction.save();
 
-      /* SENDING MAIL TO USE TO INFORM  */
+      /* SENDING MAIL TO USER TO INFORM  */
+      const html = buildRenewalStatusEmail({
+        name: transaction.user.name,
+        bookTitle: transaction.book.title,
+        renewalStatus,
+        newDueDate: transaction.dueDate,
+      });
       await sendMail({
         to: transaction.user.email,
         subject: "Renewal Request Update",
-        text: `We hope this email finds you well. We wanted to inform you about the status of your recent renewal request for the book titled ${
-          transaction.book.title
-        }.
-        ${
-          renewalStatus === "Accepted"
-            ? `Your renewal request has been accepted, and your new due date is ${transaction.dueDate}.`
-            : `We regret to inform you that your renewal request has been rejected.`
-        }
-
-        Thank you for using our library services.
-
-        Best regards,
-        GGC Library Management System Admin
-          `,
+        text: `Your renewal request for "${transaction.book.title}" has been ${renewalStatus.toLowerCase()}.`,
+        html,
       });
 
       return res.status(200).json({ message: "Processed Successfully !" });
@@ -873,6 +871,74 @@ class TransactionController {
       return res.status(200).json({
         message: "Your request has been submitted successfully !",
         transaction,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Send overdue reminder emails for all users with overdue borrowed books
+  async sendOverdueReminders(req, res, next) {
+    try {
+      const today = new Date();
+
+      const overdueTransactions = await TransactionModel.find({
+        isBorrowed: true,
+        dueDate: { $lt: today },
+      })
+        .populate("user", "name email")
+        .populate("book", "title ISBN")
+        .exec();
+
+      if (!overdueTransactions.length) {
+        return res.status(200).json({
+          message: "No overdue transactions found.",
+          totalUsers: 0,
+          totalTransactions: 0,
+        });
+      }
+
+      const byUser = new Map();
+
+      overdueTransactions.forEach((transaction) => {
+        if (!transaction.user) return;
+        const userId = String(transaction.user._id);
+        if (!byUser.has(userId)) {
+          byUser.set(userId, { user: transaction.user, items: [] });
+        }
+        const diffMs = today - transaction.dueDate;
+        const daysOverdue = Math.max(
+          0,
+          Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        );
+        byUser.get(userId).items.push({
+          title: transaction.book?.title || "Unknown",
+          ISBN: transaction.book?.ISBN,
+          dueDate: transaction.dueDate,
+          daysOverdue,
+        });
+      });
+
+      const sendPromises = [];
+
+      for (const { user, items } of byUser.values()) {
+        const html = buildOverdueReminderEmail({ name: user.name, items });
+        sendPromises.push(
+          sendMail({
+            to: user.email,
+            subject: "Overdue Library Books Reminder",
+            text: "You have overdue library books. Please check your library account.",
+            html,
+          })
+        );
+      }
+
+      await Promise.all(sendPromises);
+
+      return res.status(200).json({
+        message: "Overdue reminder emails sent.",
+        totalUsers: byUser.size,
+        totalTransactions: overdueTransactions.length,
       });
     } catch (error) {
       next(error);
