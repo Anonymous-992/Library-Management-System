@@ -43,12 +43,29 @@ async function generateClearanceForm(data, fileName) {
   jumpLine(doc, 5);
 
   /* ################### TEXT ##################### */
-  doc.fontSize(10).fill("#021c27").text("Govt. Graduate College, Jhelum", {
-    align: "center",
-  });
+  const {
+    type,
+    studentName,
+    studentRollNumber,
+    departmentName,
+    adminName,
+    adminDesignation,
+    hodName,
+    hodDesignation,
+  } = data;
+
+  doc
+    .fontSize(10)
+    .fill("#021c27")
+    .text("University Of Azad Jammu & Kashmir Neelum Campus", {
+      align: "center",
+    });
   jumpLine(doc, 1);
 
-  doc.fontSize(20).text("STUDENT CLEARANCE FORM", {
+  const title =
+    type === "Transfer" ? "STUDENT TRANSFER CLEARANCE FORM" : "STUDENT CLEARANCE FORM";
+
+  doc.fontSize(20).text(title, {
     align: "center",
   });
   jumpLine(doc, 1);
@@ -59,14 +76,38 @@ async function generateClearanceForm(data, fileName) {
 
   jumpLine(doc, 1);
 
+  let bodyLines;
+
+  if (type === "Transfer") {
+    bodyLines = [
+      `This certificate confirms that ${studentName}, Registration Number ${studentRollNumber}, from the Department of ${departmentName}, has requested a Transfer Clearance from the University/Institute Library.`,
+      "",
+      "The library certifies that:",
+      "• The student has returned all issued library materials.",
+      "• No outstanding fines or dues remain.",
+      "• All library-related responsibilities have been fulfilled prior to transfer.",
+      "",
+      "This clearance request has been duly verified and approved by:",
+    ];
+  } else {
+    bodyLines = [
+      `This certificate is issued to confirm that ${studentName}, bearing Registration Number ${studentRollNumber}, from the Department of ${departmentName}, has successfully completed all necessary library-related formalities required for graduation.`,
+      "",
+      "The library hereby certifies that the student has:",
+      "• Returned all borrowed library materials.",
+      "• Cleared all outstanding dues, penalties, or obligations.",
+      "• Met all requirements set forth by the University/Institute Library.",
+      "",
+      "This clearance has been reviewed and approved by:",
+    ];
+  }
+
   doc
     .fontSize(10)
-    .text(
-      `This is to certify that ${data?.studentName} (${data?.studentRollNumber}) has successfully met all academic and administrative requirements at Govt.Graduate College, Jhelum. The requested clearance for Graduation has been approved by Librarian, HOD and Clerk.`,
-      {
-        align: "center",
-      }
-    );
+    .fill("#021c27")
+    .text(bodyLines.join("\n"), {
+      align: "left",
+    });
 
   /* SIGNATURES */
   const lineSize = 174;
@@ -96,10 +137,19 @@ async function generateClearanceForm(data, fileName) {
     .lineTo(endLine3, signatureHeight)
     .stroke();
 
+  const adminSignatureName = adminName || "Library Admin";
+  const adminSignatureDesignation = adminDesignation || "Librarian";
+  const studentSignatureName = studentName || "Student";
+  const studentSignatureDesignation = "Student";
+  const hodSignatureName = hodName || "HOD";
+  const hodSignatureDesignation =
+    hodDesignation ||
+    (departmentName ? `HOD, Department of ${departmentName}` : "HOD");
+
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("John Doe", startLine1, signatureHeight + 10, {
+    .text(adminSignatureName, startLine1, signatureHeight + 10, {
       columns: 1,
       columnGap: 0,
       height: 40,
@@ -110,7 +160,7 @@ async function generateClearanceForm(data, fileName) {
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("Associate Professor", startLine1, signatureHeight + 25, {
+    .text(adminSignatureDesignation, startLine1, signatureHeight + 25, {
       columns: 1,
       columnGap: 0,
       height: 40,
@@ -121,7 +171,7 @@ async function generateClearanceForm(data, fileName) {
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("Student Name", startLine2, signatureHeight + 10, {
+    .text(studentSignatureName, startLine2, signatureHeight + 10, {
       columns: 1,
       columnGap: 0,
       height: 40,
@@ -132,7 +182,7 @@ async function generateClearanceForm(data, fileName) {
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("Student", startLine2, signatureHeight + 25, {
+    .text(studentSignatureDesignation, startLine2, signatureHeight + 25, {
       columns: 1,
       columnGap: 0,
       height: 40,
@@ -143,7 +193,7 @@ async function generateClearanceForm(data, fileName) {
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("Jane Doe", startLine3, signatureHeight + 10, {
+    .text(hodSignatureName, startLine3, signatureHeight + 10, {
       columns: 1,
       columnGap: 0,
       height: 40,
@@ -154,7 +204,7 @@ async function generateClearanceForm(data, fileName) {
   doc
     .fontSize(10)
     .fill("#021c27")
-    .text("Director", startLine3, signatureHeight + 25, {
+    .text(hodSignatureDesignation, startLine3, signatureHeight + 25, {
       columns: 1,
       columnGap: 0,
       height: 40,

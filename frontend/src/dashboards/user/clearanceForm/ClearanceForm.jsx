@@ -63,9 +63,15 @@ const ClearanceForm = () => {
       toast.error(
         `Cannot get printed clearance form becoz request status is ${request.status}`
       );
+      return;
     }
-    window.open(`${BASE_URL}/${request.pdfLink}`)
-    // CHECK STATUS OF REQUEST..... IF PENDING THEN SHOW TOAST AND IF REJECTED THEN ALSO....
+
+    if (!request.pdfLink) {
+      toast.error("Clearance form is not generated yet.");
+      return;
+    }
+
+    window.open(`${BASE_URL}/${request.pdfLink}`);
   };
 
   useEffect(() => {
@@ -97,9 +103,7 @@ const ClearanceForm = () => {
               <td>Made By</td>
               <td>Type</td>
               <td>Librarian Approvel</td>
-              <td>Clerk Approvel</td>
               <td>HOD Approvel</td>
-
               <td>Actions</td>
             </tr>
           </thead>
@@ -121,19 +125,6 @@ const ClearanceForm = () => {
                       } `}
                     >
                       {i.librarianApprovalStatus}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        i?.clerkApprovalStatus === "Pending"
-                          ? "badge__warning"
-                          : i?.clerkApprovalStatus === "Approved"
-                          ? "badge__success"
-                          : "badge__danger"
-                      } `}
-                    >
-                      {i.clerkApprovalStatus}
                     </span>
                   </td>
                   <td>

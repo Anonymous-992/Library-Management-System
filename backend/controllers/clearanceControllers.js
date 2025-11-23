@@ -1,5 +1,6 @@
 import ClearanceModel from "../models/clearance-form-model.js";
 import UserModel from "../models/user-model.js";
+import DepartementModel from "../models/departement-model.js";
 import { ErrorHandlerService, paginationService } from "../services/index.js";
 import generateClearanceForm from "../services/clerance-form-pdf-genrator.js";
 
@@ -83,40 +84,66 @@ class ClearanceController {
         STATUS = "PENDING","APPROVED","REJECTED" ACCORDING TO ROLE
      */
     const { page, skip, limit } = paginationService(req);
-    const { role, status } = req.query;
-    console.log(req.query);
-    if (!role || !status) {
+    const { status } = req.query;
+    const { role } = req.userData;
+    console.log({ role, status });
+    if (!status) {
       return next(ErrorHandlerService.badRequest("Please provide queries."));
     }
 
-    let filter = {};
-    // Modify the query based on the role
-    if (role === "Clerk") {
-      filter = {
-        librarianApprovalStatus: "Approved", // Only show requests approved by librarian
-        clerkApprovalStatus: status,
-      };
-    } else if (role === "HOD") {
-      filter = {
-        librarianApprovalStatus: "Approved",
-        clerkApprovalStatus: "Approved",
-        hodApprovalStatus: status,
-      };
-    } else {
-      filter = {
-        librarianApprovalStatus: status,
-      };
-    }
-
     try {
-      const [clearanceRequests, totalRecords] = await Promise.all([
-        ClearanceModel.find(filter, "-__v")
-          .populate("user", "name email fatherName rollNumber")
-          .skip(skip)
-          .limit(limit)
-          .exec(),
-        ClearanceModel.countDocuments(filter).exec(),
-      ]);
+      let filter = {};
+      let clearanceRequests = [];
+      let totalRecords = 0;
+
+      if (role === "Admin") {
+        // Librarian/Admin: filter by librarian approval status only
+        filter = {
+          librarianApprovalStatus: status,
+        };
+
+        [clearanceRequests, totalRecords] = await Promise.all([
+          ClearanceModel.find(filter, "-__v")
+            .populate("user", "name email fatherName rollNumber")
+            .skip(skip)
+            .limit(limit)
+            .exec(),
+          ClearanceModel.countDocuments(filter).exec(),
+        ]);
+      } else if (role === "HOD") {
+        // HOD: only see requests for students in their own department
+        const departement = await DepartementModel.findOne({ hod: req.userData._id });
+        if (!departement) {
+          return res
+            .status(200)
+            .json({ clearanceRequests: [], page, limit, totalRecords: 0, totalPages: 0 });
+        }
+
+        const studentsInDept = await UserModel.find(
+          { departement: departement._id },
+          "_id"
+        ).exec();
+        const studentIds = studentsInDept.map((s) => s._id);
+
+        filter = {
+          hodApprovalStatus: status,
+          user: { $in: studentIds },
+        };
+
+        [clearanceRequests, totalRecords] = await Promise.all([
+          ClearanceModel.find(filter, "-__v")
+            .populate("user", "name email fatherName rollNumber")
+            .skip(skip)
+            .limit(limit)
+            .exec(),
+          ClearanceModel.countDocuments(filter).exec(),
+        ]);
+      } else {
+        return next(
+          ErrorHandlerService.forbidden("Not allowed to view clearance requests")
+        );
+      }
+
       const totalPages = Math.ceil(totalRecords / limit);
       return res
         .status(200)
@@ -127,10 +154,11 @@ class ClearanceController {
   }
 
   async handleClearanceRequest(req, res, next) {
-    const { clearanceRequestID, status, reason, role } = req.body;
+    const { clearanceRequestID, status, reason } = req.body;
+    const { role } = req.userData;
 
     // Validate request
-    if (!clearanceRequestID || !status || !role) {
+    if (!clearanceRequestID || !status) {
       return next(ErrorHandlerService.validationError());
     }
 
@@ -149,19 +177,61 @@ class ClearanceController {
         return next(ErrorHandlerService.notFound("Student Not Found !"));
       }
 
-      // Handle request based on role
+      // Helper to build PDF data with student, department, admin, and HOD details
+      const buildPdfData = async () => {
+        const [adminUser, departement] = await Promise.all([
+          UserModel.findOne({ role: "Admin" }),
+          student.departement
+            ? DepartementModel.findById(student.departement).populate("hod")
+            : null,
+        ]);
+
+        const departmentName = departement?.name || "N/A";
+        const hodUser = departement?.hod;
+        const hodName = hodUser?.name || "N/A";
+        const hodDesignation = `HOD, Department of ${departmentName}`;
+
+        const adminName = adminUser?.name || "Library Admin";
+        const adminDesignation = "Librarian";
+
+        return {
+          _id: clearanceRequest._id,
+          type: clearanceRequest.type,
+          studentName: student?.name,
+          studentRollNumber: student?.rollNumber,
+          departmentName,
+          adminName,
+          adminDesignation,
+          hodName,
+          hodDesignation,
+        };
+      };
+
+      // Handle request based on authenticated role
       switch (role) {
         case "Admin":
           if (status === "Approved") {
-            // Disable student account
-            student.accountStatus = "Disabled";
-            await student.save();
-
-            // Update clearance request status
+            // Update librarian approval
             clearanceRequest.librarianApprovalStatus = "Approved";
-            await clearanceRequest.save();
 
-            // TODO: Send request to clerk
+            // If HOD has already approved, finalize clearance
+            if (clearanceRequest.hodApprovalStatus === "Approved") {
+              clearanceRequest.status = "Approved";
+
+              // Generate PDF if not already generated
+              if (!clearanceRequest.pdfLink) {
+                const fileName = `${clearanceRequest._id}.pdf`;
+                const pdfData = await buildPdfData();
+                await generateClearanceForm(pdfData, fileName);
+                clearanceRequest.pdfLink = `documents/${fileName}`;
+              }
+
+              // Disable student account after full approval
+              student.accountStatus = "Disabled";
+              await student.save();
+            }
+
+            await clearanceRequest.save();
           } else {
             // Validate reason
             if (!reason) {
@@ -175,55 +245,33 @@ class ClearanceController {
             // Update clearance request status
             clearanceRequest.librarianApprovalStatus = "Rejected";
             clearanceRequest.status = "Rejected";
+            clearanceRequest.rejectedReason = reason;
             await clearanceRequest.save();
-
-            // Send email to student
-          }
-          break;
-        case "Clerk":
-          if (status === "Approved") {
-            // Update clearance request status
-            clearanceRequest.clerkApprovalStatus = "Approved";
-            await clearanceRequest.save();
-
-            // TODO: Send request to HOD
-          } else {
-            // Validate reason
-            if (!reason) {
-              return next(
-                ErrorHandlerService.validationError(
-                  "Please provide reason of rejection."
-                )
-              );
-            }
-
-            // Update clearance request status
-            clearanceRequest.clerkApprovalStatus = "Rejected";
-            clearanceRequest.status = "Rejected";
-            await clearanceRequest.save();
-
-            // Send email to student
           }
           break;
         case "HOD":
           if (status === "Approved") {
-            // Update clearance request status
+            // Update HOD approval
             clearanceRequest.hodApprovalStatus = "Approved";
-            clearanceRequest.status = "Approved";
-            
-            /* CREATE PDF FORM  */
-            const fileName = `${clearanceRequest._id}.pdf`;
-            const data = {
-                _id : clearanceRequest._id,
-                studentName : student?.name,
-                studentRollNumber  : student?.rollNumber
-            };
-            await generateClearanceForm(data,fileName);
-           
-            /* SAVE PATH INTO DATABASE */
-            clearanceRequest.pdfLink = `documents/${fileName}`;
+
+            // If librarian has already approved, finalize clearance
+            if (clearanceRequest.librarianApprovalStatus === "Approved") {
+              clearanceRequest.status = "Approved";
+
+              // Generate PDF if not already generated
+              if (!clearanceRequest.pdfLink) {
+                const fileName = `${clearanceRequest._id}.pdf`;
+                const pdfData = await buildPdfData();
+                await generateClearanceForm(pdfData, fileName);
+                clearanceRequest.pdfLink = `documents/${fileName}`;
+              }
+
+              // Disable student account after full approval
+              student.accountStatus = "Disabled";
+              await student.save();
+            }
+
             await clearanceRequest.save();
-            // TODO: Send email to student with link to download form
           } else {
             // Validate reason
             if (!reason) {
@@ -237,13 +285,12 @@ class ClearanceController {
             // Update clearance request status
             clearanceRequest.hodApprovalStatus = "Rejected";
             clearanceRequest.status = "Rejected";
+            clearanceRequest.rejectedReason = reason;
             await clearanceRequest.save();
-
-            // Send email to student
           }
           break;
         default:
-          return next(ErrorHandlerService.validationError("Invalid role"));
+          return next(ErrorHandlerService.forbidden("Invalid role"));
       }
 
       // Send response

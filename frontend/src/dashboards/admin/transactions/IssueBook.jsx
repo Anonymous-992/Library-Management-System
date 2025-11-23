@@ -38,7 +38,9 @@ const IssueBook = () => {
         /* CLEAR INPUT VALUE */
         e.target.email.value = "";
         e.target.rollNumber.value = "";
-        return "Student searched successfully..";
+        const role = data?.data?.user?.role;
+        const label = role === "Student" ? "Student" : "Teacher";
+        return `${label} searched successfully..`;
       },
       error: (err) => {
         console.log(err);
@@ -95,7 +97,9 @@ const IssueBook = () => {
       loading: "Loading...",
       success: (data) => {
         setUserData(data?.data);
-        return "Student selected successfully..";
+        const role = data?.data?.user?.role;
+        const label = role === "Student" ? "Student" : "Teacher";
+        return `${label} selected successfully..`;
       },
       error: (err) => {
         console.log();

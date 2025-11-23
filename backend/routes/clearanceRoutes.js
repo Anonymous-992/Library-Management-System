@@ -7,7 +7,7 @@ const clearanceRouter = Router();
 
 clearanceRouter.post("/submit-form",authMiddleware,clearanceControllers.submitForm);
 clearanceRouter.get("/student-requests",authMiddleware,clearanceControllers.getClearanceRequestsByStudent);
-clearanceRouter.get("/requests",clearanceControllers.getClearanceRequests);
+clearanceRouter.get("/requests",authMiddleware,clearanceControllers.getClearanceRequests);
 clearanceRouter.post("/handle-request",authMiddleware,clearanceControllers.handleClearanceRequest);
 
 

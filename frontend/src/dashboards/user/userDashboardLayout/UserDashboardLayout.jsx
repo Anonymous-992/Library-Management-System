@@ -56,7 +56,7 @@ const UserDashboardLayout = () => {
       ] 
     },
     {
-      ...((auth?.user?.role === "HOD" ||auth?.user?.role === "Clerk"  ) && {
+      ...((auth?.user?.role === "HOD") && {
         id: 6,
         title : "Clearance Requests",
         listItems:[
