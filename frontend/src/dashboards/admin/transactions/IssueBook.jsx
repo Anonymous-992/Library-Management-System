@@ -5,6 +5,7 @@ import {
   getUserInfo,
   issueBook,
   getAllStudents,
+  getAllTeachers,
   getAllBooks,
   BASE_URL,
 } from "../../../http";
@@ -65,13 +66,18 @@ const IssueBook = () => {
 
     studentSearchTimeout.current = setTimeout(async () => {
       try {
-        const { data } = await getAllStudents(
-          field === "email" ? value : "",
-          "",
-          field === "rollNumber" ? value : "",
-          1
-        );
-        setStudentSuggestions(data?.students || []);
+        if (field === "email") {
+          const [studentsRes, teachersRes] = await Promise.all([
+            getAllStudents(value, "", "", 1),
+            getAllTeachers(value, "", 1),
+          ]);
+          const students = studentsRes?.data?.students || [];
+          const teachers = teachersRes?.data?.teachers || [];
+          setStudentSuggestions([...students, ...teachers]);
+        } else {
+          const { data } = await getAllStudents("", "", value, 1);
+          setStudentSuggestions(data?.students || []);
+        }
       } catch (error) {
         console.log(error);
       }
@@ -254,7 +260,7 @@ const IssueBook = () => {
       <div className="details__container">
         <div className="student__details">
           {/* SEARCH SECTION */}
-          <h3>Search Student</h3>
+          <h3>Search User (Student / Teacher / HOD)</h3>
           <p>Find the user whom you want to issue books to.</p>
           <form onSubmit={searchStudent}>
             <div className="form-control autocomplete">
@@ -271,7 +277,7 @@ const IssueBook = () => {
               />
               {activeStudentField === "email" &&
                 studentSuggestions.length > 0 && (
-                  <ul className="autocomplete__list">
+                  <ul className="autocomplete__list autocomplete__list--users">
                     {studentSuggestions.map((student) => (
                       <li
                         key={student?._id}
@@ -279,11 +285,25 @@ const IssueBook = () => {
                           handleSelectStudentSuggestion(student, "email")
                         }
                       >
-                        <span className="primary">{student?.name}</span>
-                        <span className="secondary">
-                          {student?.email}
-                          {student?.rollNumber && `  ${student?.rollNumber}`}
-                        </span>
+                        <div className="user__suggestion">
+                          <img
+                            src={
+                              student?.imagePath
+                                ? `${BASE_URL}/${student?.imagePath}`
+                                : defaultCover
+                            }
+                            alt={student?.name}
+                          />
+                          <div className="content">
+                            <span className="title">{student?.name}</span>
+                            <span className="meta">
+                              {student?.email}
+                              {student?.rollNumber &&
+                                `  ${student?.rollNumber}`}
+                            </span>
+                            <span className="meta">Role: {student?.role}</span>
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -303,7 +323,7 @@ const IssueBook = () => {
               />
               {activeStudentField === "rollNumber" &&
                 studentSuggestions.length > 0 && (
-                  <ul className="autocomplete__list">
+                  <ul className="autocomplete__list autocomplete__list--users">
                     {studentSuggestions.map((student) => (
                       <li
                         key={student?._id}
@@ -311,11 +331,24 @@ const IssueBook = () => {
                           handleSelectStudentSuggestion(student, "rollNumber")
                         }
                       >
-                        <span className="primary">{student?.name}</span>
-                        <span className="secondary">
-                          {student?.rollNumber}
-                          {student?.email && `  ${student?.email}`}
-                        </span>
+                        <div className="user__suggestion">
+                          <img
+                            src={
+                              student?.imagePath
+                                ? `${BASE_URL}/${student?.imagePath}`
+                                : defaultCover
+                            }
+                            alt={student?.name}
+                          />
+                          <div className="content">
+                            <span className="title">{student?.name}</span>
+                            <span className="meta">
+                              {student?.rollNumber}
+                              {student?.email && `  ${student?.email}`}
+                            </span>
+                            <span className="meta">Role: {student?.role}</span>
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>

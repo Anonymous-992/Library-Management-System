@@ -124,6 +124,42 @@
                             }
                         }
                     }
+
+                    .autocomplete__list--users{
+                        li{
+                            padding: 6px 8px;
+                        }
+
+                        .user__suggestion{
+                            display: flex;
+                            align-items: center;
+                            column-gap: 10px;
+
+                            img{
+                                width: 36px;
+                                height: 36px;
+                                object-fit: cover;
+                                border-radius: 50%;
+                                flex-shrink: 0;
+                            }
+
+                            .content{
+                                display: flex;
+                                flex-direction: column;
+                                row-gap: 2px;
+
+                                .title{
+                                    font-weight: 500;
+                                    font-size: 14px;
+                                }
+
+                                .meta{
+                                    font-size: 12px;
+                                    opacity: 0.85;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
