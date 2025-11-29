@@ -40,7 +40,7 @@ const Home = () => {
     <div className="bg text__color">
       {/* Hero Section */}
       <section className="hero ">
-        <h1>Welcomet to Library Management</h1>
+        <h1>Welcome to Library Management</h1>
         <span className="subheading">
           Explore our vast collection of books and resources.
         </span>

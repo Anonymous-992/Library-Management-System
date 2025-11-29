@@ -25,6 +25,7 @@ import {
   sendMail,
 } from "../services/index.js";
 import {
+  buildIssueConfirmationEmail,
   buildRenewalStatusEmail,
   buildOverdueReminderEmail,
 } from "../services/email-template-service.js";
@@ -63,6 +64,40 @@ const updateBookStatus = async (bookId) => {
   }
 
   await book.save();
+};
+
+const sendIssueConfirmationEmail = async (transactionId) => {
+  const transaction = await TransactionModel.findById(transactionId)
+    .populate("user", "name email")
+    .populate("book", "title ISBN");
+
+  if (!transaction || !transaction.user || !transaction.book) {
+    return;
+  }
+
+  const html = buildIssueConfirmationEmail({
+    name: transaction.user.name,
+    bookTitle: transaction.book.title,
+    ISBN: transaction.book.ISBN,
+    borrowDate: transaction.borrowDate,
+    dueDate: transaction.dueDate,
+  });
+
+  const issueDateText =
+    transaction.borrowDate && transaction.borrowDate.toDateString
+      ? transaction.borrowDate.toDateString()
+      : String(transaction.borrowDate || "");
+  const dueDateText =
+    transaction.dueDate && transaction.dueDate.toDateString
+      ? transaction.dueDate.toDateString()
+      : String(transaction.dueDate || "");
+
+  await sendMail({
+    to: transaction.user.email,
+    subject: "Book Issue Confirmation",
+    text: `The book "${transaction.book.title}" (ISBN: ${transaction.book.ISBN}) has been issued to you. Issue date: ${issueDateText}, Due date: ${dueDateText}.`,
+    html,
+  });
 };
 
 class TransactionController {
@@ -242,7 +277,34 @@ class TransactionController {
       }
       await book.save();
       await updateBookStatus(book._id);
+      await sendIssueConfirmationEmail(transaction._id);
       return res.status(200).json({ msg: "Book Issued Successfully !" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async issueReservedBook(req, res, next) {
+    const { reservationID } = req.body;
+    if (!reservationID) {
+      return next(
+        ErrorHandlerService.validationError("Reservation is required.")
+      );
+    }
+    try {
+      const reservation = await ReservationModel.findById(reservationID);
+      if (!reservation) {
+        return next(
+          ErrorHandlerService.notFound("Reservation not found !")
+        );
+      }
+
+      req.body = {
+        userID: String(reservation.user),
+        bookID: String(reservation.book),
+      };
+
+      return await this.issuedBook(req, res, next);
     } catch (error) {
       next(error);
     }
@@ -549,6 +611,7 @@ class TransactionController {
         bookTitle: transaction.book.title,
         renewalStatus,
         newDueDate: transaction.dueDate,
+        renewalDays: transaction.renewalDays,
       });
       await sendMail({
         to: transaction.user.email,
@@ -823,6 +886,36 @@ class TransactionController {
     } catch (error) {}
   }
 
+  async rejectReservation(req, res, next) {
+    const { reservationID } = req.body;
+    if (!reservationID) {
+      return next(
+        ErrorHandlerService.validationError("Reservation is required.")
+      );
+    }
+    try {
+      const reservation = await ReservationModel.findByIdAndDelete(
+        reservationID
+      );
+      if (!reservation) {
+        return next(
+          ErrorHandlerService.notFound("Reservation not found !")
+        );
+      }
+
+      const bookId = reservation.book;
+      if (bookId) {
+        await updateBookStatus(bookId);
+      }
+
+      return res
+        .status(200)
+        .json({ message: "Reservation rejected successfully!" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async renewRequest(req, res, next) {
     const { transactionID, renewalDays } = req.body;
     /* Validate renewalDays (between 1-7 days) */
@@ -877,73 +970,101 @@ class TransactionController {
     }
   }
 
-  // Send overdue reminder emails for all users with overdue borrowed books
+  // Send overdue reminder emails for all users with overdue borrowed books (HTTP endpoint)
   async sendOverdueReminders(req, res, next) {
     try {
-      const today = new Date();
-
-      const overdueTransactions = await TransactionModel.find({
-        isBorrowed: true,
-        dueDate: { $lt: today },
-      })
-        .populate("user", "name email")
-        .populate("book", "title ISBN")
-        .exec();
-
-      if (!overdueTransactions.length) {
-        return res.status(200).json({
-          message: "No overdue transactions found.",
-          totalUsers: 0,
-          totalTransactions: 0,
-        });
-      }
-
-      const byUser = new Map();
-
-      overdueTransactions.forEach((transaction) => {
-        if (!transaction.user) return;
-        const userId = String(transaction.user._id);
-        if (!byUser.has(userId)) {
-          byUser.set(userId, { user: transaction.user, items: [] });
-        }
-        const diffMs = today - transaction.dueDate;
-        const daysOverdue = Math.max(
-          0,
-          Math.floor(diffMs / (1000 * 60 * 60 * 24))
-        );
-        byUser.get(userId).items.push({
-          title: transaction.book?.title || "Unknown",
-          ISBN: transaction.book?.ISBN,
-          dueDate: transaction.dueDate,
-          daysOverdue,
-        });
-      });
-
-      const sendPromises = [];
-
-      for (const { user, items } of byUser.values()) {
-        const html = buildOverdueReminderEmail({ name: user.name, items });
-        sendPromises.push(
-          sendMail({
-            to: user.email,
-            subject: "Overdue Library Books Reminder",
-            text: "You have overdue library books. Please check your library account.",
-            html,
-          })
-        );
-      }
-
-      await Promise.all(sendPromises);
-
-      return res.status(200).json({
-        message: "Overdue reminder emails sent.",
-        totalUsers: byUser.size,
-        totalTransactions: overdueTransactions.length,
-      });
+      const result = await runOverdueReminderJob();
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }
   }
+}
+
+export async function runOverdueReminderJob() {
+  const today = new Date();
+
+  const overdueTransactions = await TransactionModel.find({
+    isBorrowed: true,
+    dueDate: { $lt: today },
+  })
+    .populate("user", "name email")
+    .populate("book", "title ISBN")
+    .exec();
+
+  if (!overdueTransactions.length) {
+    return {
+      message: "No overdue transactions found.",
+      totalUsers: 0,
+      totalTransactions: 0,
+    };
+  }
+
+  const byUser = new Map();
+
+  overdueTransactions.forEach((transaction) => {
+    if (!transaction.user) return;
+    const userId = String(transaction.user._id);
+    if (!byUser.has(userId)) {
+      byUser.set(userId, { user: transaction.user, items: [] });
+    }
+    const diffMs = today - transaction.dueDate;
+    const daysOverdue = Math.max(
+      0,
+      Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    );
+    const { fine } = calculateFine(transaction.dueDate, today);
+    byUser.get(userId).items.push({
+      title: transaction.book?.title || "Unknown",
+      ISBN: transaction.book?.ISBN,
+      dueDate: transaction.dueDate,
+      daysOverdue,
+      fine,
+    });
+  });
+
+  const sendPromises = [];
+
+  for (const { user, items } of byUser.values()) {
+    const html = buildOverdueReminderEmail({ name: user.name, items });
+
+    const summaryLines = items.map((item) => {
+      const days =
+        item.daysOverdue !== undefined && item.daysOverdue !== null
+          ? item.daysOverdue
+          : "-";
+      const fine =
+        item.fine !== undefined && item.fine !== null
+          ? item.fine
+          : days !== "-"
+          ? days * 10
+          : "-";
+
+      return `"${item.title}" (ISBN: ${item.ISBN || "-"}) - ${days} day(s) overdue, fine: ${
+        fine === "-" ? "-" : fine
+      }`;
+    });
+
+    const text =
+      "You have overdue library books:\n" + summaryLines.join("\n");
+
+    sendPromises.push(
+      sendMail({
+        to: user.email,
+        subject: "Overdue Library Books Reminder",
+        text,
+        html,
+      })
+    );
+  }
+
+  await Promise.all(sendPromises);
+
+  return {
+    message: "Overdue reminder emails sent.",
+    totalUsers: byUser.size,
+    totalTransactions: overdueTransactions.length,
+  };
 }
 
 export default new TransactionController();

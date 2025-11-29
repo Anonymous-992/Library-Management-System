@@ -208,6 +208,12 @@ export const getReturnedBooks = () =>
   api.get(`transactions/returned-books-user`);
 export const unReservedBook = (_id) =>
   api.get(`transactions/unreserved-book/${_id}`);
+export const issueReservedBook = (data) =>
+  api.post(`transactions/issue-reserved-book`, data);
+export const rejectReservation = (data) =>
+  api.post(`transactions/reject-reservation`, data);
+export const sendOverdueReminders = () =>
+  api.post(`/transactions/send-overdue-reminders`);
 
 /* CLEARANCE FORM REQUESTS */
 export const submitClearanceForm = (data) =>

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   exportBooks,
   getAllReservedBooks,
+  issueReservedBook,
+  rejectReservation,
 } from "../../../http";
 
 import { toast } from "react-hot-toast";
@@ -37,6 +39,36 @@ const ReservedBookList = () => {
     }
   };
 
+  const handleIssue = async (reservationId) => {
+    const promise = issueReservedBook({ reservationID: reservationId });
+    toast.promise(promise, {
+      loading: "Issuing...",
+      success: (response) => {
+        fetchData();
+        return "Book issued successfully..";
+      },
+      error: (err) => {
+        console.log(err);
+        return err?.response?.data?.message || "Something went wrong !";
+      },
+    });
+  };
+
+  const handleReject = async (reservationId) => {
+    const promise = rejectReservation({ reservationID: reservationId });
+    toast.promise(promise, {
+      loading: "Processing...",
+      success: (response) => {
+        fetchData();
+        return "Reservation rejected successfully..";
+      },
+      error: (err) => {
+        console.log(err);
+        return err?.response?.data?.message || "Something went wrong !";
+      },
+    });
+  };
+
   /* FETCH DATA WHEN CURRENT PAGE CHANGE */
   useEffect(() => {
     fetchData();
@@ -60,6 +92,7 @@ const ReservedBookList = () => {
               <td>User Name</td>
               <td>Roll Number/Email</td>
               <td>Reserved Date</td>
+              <td>Actions</td>
             </tr>
           </thead>
           <tbody>
@@ -78,7 +111,27 @@ const ReservedBookList = () => {
                   </td>
 
                   <td>{formatDate(i?.date)}</td>
-                
+                  <td>
+                    <div style={{ width: "200px" }}>
+                      <button
+                        className="btn btn__primary"
+                        style={{ marginRight: "7px" }}
+                        onClick={() => {
+                          handleIssue(i._id);
+                        }}
+                      >
+                        Issue
+                      </button>
+                      <button
+                        className="btn btn__danger"
+                        onClick={() => {
+                          handleReject(i._id);
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}

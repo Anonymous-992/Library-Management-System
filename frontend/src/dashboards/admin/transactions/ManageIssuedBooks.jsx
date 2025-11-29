@@ -4,6 +4,7 @@ import {
   exportBooks,
   getAllIssuedBooks,
   payFine,
+  sendOverdueReminders,
 } from "../../../http";
 
 import { toast } from "react-hot-toast";
@@ -31,6 +32,26 @@ const ManageIssueBooks = () => {
       error: (err) => {
         console.log(err);
         return "Something went wrong while exporting data.";
+      },
+    });
+  };
+
+  const handleSendOverdueReminders = () => {
+    const promise = sendOverdueReminders();
+    toast.promise(promise, {
+      loading: "Sending overdue updates...",
+      success: (response) => {
+        return (
+          response?.data?.message ||
+          "Overdue reminder emails sent successfully."
+        );
+      },
+      error: (err) => {
+        console.log(err);
+        return (
+          err?.response?.data?.message ||
+          "Something went wrong while sending overdue updates."
+        );
       },
     });
   };
@@ -132,6 +153,12 @@ const ManageIssueBooks = () => {
           </Link>
           <button className="btn btn__secondary" onClick={handleExport}>
             Export to CSV
+          </button>
+          <button
+            className="btn btn__primary"
+            onClick={handleSendOverdueReminders}
+          >
+            Send Overdue Updates
           </button>
         </div>
       </div>

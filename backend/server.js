@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 /* ENV VARIABLES */
 import { APP_PORT, MONGO_DB_URI } from "./config/index.js";
+import { runOverdueReminderJob } from "./controllers/transactionControllers.js";
 /* IMPORT ALL ROUTES */
 import {
   almirahRouter,
@@ -45,6 +46,27 @@ app.use("/public", express.static("./public"));
 app.use("/uploads", express.static("./uploads"));
 app.use("/documents", express.static("./documents"));
 
+// Schedule automatic overdue reminder emails once per day
+const startOverdueReminderScheduler = () => {
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+  const runJob = async () => {
+    try {
+      const result = await runOverdueReminderJob();
+      console.log(
+        `Overdue reminder job: ${result.totalUsers} users, ${result.totalTransactions} transactions`
+      );
+    } catch (error) {
+      console.error("Error in overdue reminder job", error);
+    }
+  };
+
+  // Run once on startup
+  runJob();
+  // Then run daily
+  setInterval(runJob, ONE_DAY_MS);
+};
+
 /* MONGOOSE SETUP */
 mongoose
   .connect(MONGO_DB_URI)
@@ -53,6 +75,7 @@ mongoose
     /* CREATE SERVER */
     app.listen(APP_PORT, () => {
       console.log(`SERVER IS LISTNING ON PORT ${APP_PORT}`);
+      startOverdueReminderScheduler();
     });
   })
   .catch((err) => {

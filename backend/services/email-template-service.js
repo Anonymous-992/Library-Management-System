@@ -153,11 +153,49 @@ export function buildPasswordResetEmail({ name, resetUrl }) {
   });
 }
 
+export function buildIssueConfirmationEmail({
+  name,
+  bookTitle,
+  ISBN,
+  borrowDate,
+  dueDate,
+}) {
+  const title = "Book Issue Confirmation";
+  const greeting = `Dear ${name},`;
+  const intro = `This is to confirm that the following book has been issued to your library account: .`;
+
+  const formatDate = (value) =>
+    value && value.toLocaleDateString ? value.toLocaleDateString() : value;
+
+  const bodyLines = [
+    `<strong>ISBN:</strong> ${ISBN}`,
+    `<strong>Book Name:</strong> ${bookTitle}`,
+    `<strong>Issue date:</strong> ${formatDate(borrowDate)}`,
+    `<strong>Due date:</strong> ${formatDate(dueDate)}`,
+  ];
+
+  const footerLines = [
+    "Please make sure to return or renew the book before the due date to avoid fines.",
+  ];
+
+  return buildBaseEmail({
+    title,
+    previewText: "Your library book has been issued.",
+    greeting,
+    intro,
+    bodyLines,
+    ctaLabel: "View My Borrowed Books",
+    ctaUrl: BASE_URL || "#",
+    footerLines,
+  });
+}
+
 export function buildRenewalStatusEmail({
   name,
   bookTitle,
   renewalStatus,
   newDueDate,
+  renewalDays,
 }) {
   const approved = renewalStatus === "Accepted";
   const title = "Renewal Request Update";
@@ -167,6 +205,9 @@ export function buildRenewalStatusEmail({
   const bodyLines = approved
     ? [
         `Good news! Your renewal request has been <strong>accepted</strong>.`,
+        renewalDays
+          ? `Your loan has been extended by <strong>${renewalDays}</strong> day(s).`
+          : "",
         `Your new due date is <strong>${newDueDate?.toLocaleDateString?.() || newDueDate}</strong>.`,
       ]
     : [
@@ -246,6 +287,7 @@ export function buildOverdueReminderEmail({ name, items }) {
           "<th align=\"left\" style=\"padding: 6px 4px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color:#6b7280;\">ISBN</th>",
           "<th align=\"left\" style=\"padding: 6px 4px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color:#6b7280;\">Due Date</th>",
           "<th align=\"left\" style=\"padding: 6px 4px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color:#6b7280;\">Days Overdue</th>",
+          "<th align=\"left\" style=\"padding: 6px 4px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color:#6b7280;\">Fine</th>",
           "</tr>",
           "</thead>",
           "<tbody>",
@@ -255,6 +297,12 @@ export function buildOverdueReminderEmail({ name, items }) {
                 ? item.dueDate.toLocaleDateString()
                 : item.dueDate;
             const days = item.daysOverdue ?? "-";
+            const fine =
+              item.fine !== undefined && item.fine !== null
+                ? item.fine
+                : days && days !== "-"
+                ? days * 10
+                : "-";
             return `
               <tr>
                 <td style="padding: 6px 4px; font-size: 13px; color:#374151;">${
@@ -265,6 +313,9 @@ export function buildOverdueReminderEmail({ name, items }) {
                 }</td>
                 <td style="padding: 6px 4px; font-size: 13px; color:#4b5563;">${due}</td>
                 <td style="padding: 6px 4px; font-size: 13px; color:#b91c1c;">${days}</td>
+                <td style="padding: 6px 4px; font-size: 13px; color:#b91c1c;">${
+                  fine === "-" ? "-" : fine
+                }</td>
               </tr>`;
           }),
           "</tbody>",

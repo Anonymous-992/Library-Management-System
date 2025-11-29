@@ -22,6 +22,13 @@ transactionRouter.get("/returned-books",authMiddleware,adminMiddleware,transacti
 transactionRouter.get("/renew-books",authMiddleware,adminMiddleware,transactionControllers.getRenewRequests);
 transactionRouter.post("/handle-renew-request",authMiddleware,adminMiddleware,transactionControllers.hanldeRenewRequest);
 transactionRouter.post("/send-overdue-reminders",authMiddleware,adminMiddleware,transactionControllers.sendOverdueReminders);
+transactionRouter.post(
+  "/issue-reserved-book",
+  authMiddleware,
+  adminMiddleware,
+  (req, res, next) => transactionControllers.issueReservedBook(req, res, next)
+);
+transactionRouter.post("/reject-reservation",authMiddleware,adminMiddleware,transactionControllers.rejectReservation);
 
 /* FOR TEACHERS AND STUDENT */
 transactionRouter.get("/user-dashboard-stats",authMiddleware,transactionControllers.userDashboardStats);
